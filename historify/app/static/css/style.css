@@ -1,0 +1,147 @@
+/**
+ * Historify - Stock Historical Data Management App
+ * Main stylesheet
+ */
+
+/* Global styles */
+body {
+  transition: background-color 0.3s ease;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Chart styles */
+.chart-container {
+  height: 500px;
+  position: relative;
+}
+
+.tv-lightweight-charts {
+  width: 100%;
+  height: 100%;
+}
+
+/* Toast notifications */
+#toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+}
+
+#toast-container .alert {
+  transition: opacity 0.3s ease;
+}
+
+/* Watchlist table styles */
+.watchlist-item {
+  transition: background-color 0.2s ease;
+}
+
+.watchlist-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Symbol price change */
+.price-up {
+  color: #4CAF50;
+}
+
+.price-down {
+  color: #F44336;
+}
+
+/* Progress bars */
+.progress-container {
+  height: 8px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--p);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Dashboard cards */
+.stat-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Indicators badges */
+.indicator-badge {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.indicator-badge:hover {
+  filter: brightness(1.1);
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Download status animations */
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.pulse-animation {
+  animation: pulse 1.5s infinite;
+}
+
+/* Logo styles */
+.logo {
+  height: 40px;
+  width: auto;
+}
+
+/* Custom responsive adjustments */
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .chart-container {
+    height: 400px;
+  }
+  
+  .btn-sm-full {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}

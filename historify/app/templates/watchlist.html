@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-xl mb-6">
+  <div class="card-body">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+      <h2 class="card-title text-2xl">Watchlist</h2>
+      
+      <div class="mt-3 md:mt-0">
+        <label for="add-symbol-modal" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          Add Symbol
+        </label>
+      </div>
+    </div>
+    
+    <!-- Watchlist Table -->
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th>Exchange</th>
+            <th>Last Price</th>
+            <th>Change %</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="watchlist-table">
+          <!-- Will be populated by JavaScript -->
+          <tr>
+            <td colspan="6" class="text-center">
+              <span class="loading loading-spinner loading-md"></span>
+              <span class="ml-2">Loading watchlist...</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Symbol Modal -->
+<input type="checkbox" id="add-symbol-modal" class="modal-toggle" />
+<div class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">Add Symbol to Watchlist</h3>
+    <form id="add-symbol-form">
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">Symbol</span>
+        </label>
+        <input type="text" id="symbol-input" class="input input-bordered w-full" placeholder="Enter symbol (e.g. RELIANCE)" required />
+      </div>
+      
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">Name (Optional)</span>
+        </label>
+        <input type="text" id="name-input" class="input input-bordered w-full" placeholder="Enter company name" />
+      </div>
+      
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">Exchange</span>
+        </label>
+        <select id="exchange-input" class="select select-bordered w-full">
+          <option value="NSE" selected>NSE Equity</option>
+          <option value="NFO">NSE Futures & Options</option>
+          <option value="CDS">NSE Currency</option>
+          <option value="BSE">BSE Equity</option>
+          <option value="BFO">BSE Futures & Options</option>
+          <option value="BCD">BSE Currency</option>
+          <option value="MCX">MCX Commodity</option>
+        </select>
+      </div>
+      
+      <div class="modal-action">
+        <button type="submit" class="btn btn-primary">Add</button>
+        <label for="add-symbol-modal" class="btn">Cancel</label>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<input type="checkbox" id="delete-confirm-modal" class="modal-toggle" />
+<div class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">Confirm Delete</h3>
+    <p>Are you sure you want to remove <span id="delete-symbol-name" class="font-semibold"></span> from your watchlist?</p>
+    <div class="modal-action">
+      <button id="confirm-delete-btn" class="btn btn-error">Delete</button>
+      <label for="delete-confirm-modal" class="btn">Cancel</label>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/watchlist.js') }}"></script>
+{% endblock %}

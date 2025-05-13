@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="hero min-h-[50vh] bg-base-200 rounded-xl mb-6">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">Historify</h1>
+      <p class="py-6">Download, store, and visualize historical and real-time stock market data with ease.</p>
+      <div class="flex flex-wrap justify-center gap-4">
+        <a href="/watchlist" class="btn btn-primary">Manage Watchlist</a>
+        <a href="/charts" class="btn btn-secondary">View Charts</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+  <!-- Data Download Card -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title">Download Historical Data</h2>
+      <p>Download historical stock data from various exchanges and time intervals.</p>
+      
+      <form id="download-form" class="mt-4">
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">Select Symbols (from Watchlist)</span>
+          </label>
+          <div id="symbol-selector" class="border rounded-lg p-3 max-h-40 overflow-y-auto">
+            <div class="flex flex-col gap-2" id="symbol-checkboxes">
+              <!-- Will be populated by JavaScript -->
+              <div class="flex items-center">
+                <span class="loading loading-spinner loading-sm"></span>
+                <span class="ml-2">Loading symbols...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">Date Range</span>
+          </label>
+          <select class="select select-bordered w-full" id="date-range">
+            <option value="today">Today</option>
+            <option value="5d">Last 5 Days</option>
+            <option value="30d" selected>Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+            <option value="1y">1 Year</option>
+            <option value="2y">2 Years</option>
+            <option value="5y">5 Years</option>
+            <option value="10y">10 Years</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+        </div>
+        
+        <div id="custom-date-range" class="grid grid-cols-2 gap-4 mb-4 hidden">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Start Date</span>
+            </label>
+            <input type="date" id="start-date" class="input input-bordered w-full" />
+          </div>
+          
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">End Date</span>
+            </label>
+            <input type="date" id="end-date" class="input input-bordered w-full" />
+          </div>
+        </div>
+        
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">Download Mode</span>
+          </label>
+          <div class="flex gap-4">
+            <label class="label cursor-pointer justify-start gap-2">
+              <input type="radio" name="download-mode" value="fresh" class="radio radio-primary" checked />
+              <span>Fresh Download</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-2">
+              <input type="radio" name="download-mode" value="continue" class="radio radio-primary" />
+              <span>Continue from Last</span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="card-actions justify-end">
+          <button type="submit" class="btn btn-primary" id="download-btn">
+            <span>Download Data</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Download Status Card -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title">Download Status</h2>
+      <div id="download-status" class="mt-4 h-64 overflow-y-auto">
+        <p class="text-center text-gray-500">No active downloads</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Latest Data Card -->
+<div class="card bg-base-100 shadow-xl mb-6">
+  <div class="card-body">
+    <h2 class="card-title">Latest Data</h2>
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Last Update</th>
+            <th>Records</th>
+            <th>Date Range</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="latest-data-table">
+          <!-- Will be populated by JavaScript -->
+          <tr>
+            <td colspan="5" class="text-center">
+              <span class="loading loading-spinner loading-md"></span>
+              <span class="ml-2">Loading data...</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Historify - Stock Historical Data Management{% endblock %}</title>
+  <!-- Tailwind CSS and DaisyUI CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@3.5.0/dist/full.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-primary text-primary-content shadow-lg">
+    <div class="navbar container mx-auto">
+      <div class="flex-1">
+        <a href="/" class="btn btn-ghost normal-case text-xl">
+          <span class="font-bold">Historify</span>
+        </a>
+      </div>
+      <div class="flex-none gap-2">
+        <!-- Navigation Links -->
+        <div class="hidden md:flex">
+          <ul class="menu menu-horizontal p-0">
+            <li><a href="/" class="font-semibold hover:bg-primary-focus">Dashboard</a></li>
+            <li><a href="/watchlist" class="font-semibold hover:bg-primary-focus">Watchlist</a></li>
+            <li><a href="/charts" class="font-semibold hover:bg-primary-focus">Charts</a></li>
+          </ul>
+        </div>
+        
+        <!-- Theme toggle button -->
+        <div class="dropdown dropdown-end">
+          <label tabindex="0" class="btn btn-ghost btn-circle">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </label>
+          <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+            <li><button id="theme-light" class="theme-toggle">Light Theme</button></li>
+            <li><button id="theme-dark" class="theme-toggle">Dark Theme</button></li>
+          </ul>
+        </div>
+        
+        <!-- Mobile menu button -->
+        <div class="dropdown dropdown-end md:hidden">
+          <label tabindex="0" class="btn btn-ghost btn-circle">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="h-6 w-6">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </label>
+          <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/watchlist">Watchlist</a></li>
+            <li><a href="/charts">Charts</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 container mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-neutral text-neutral-content p-4">
+    <div class="container mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0">
+          <p>&copy; 2025 Historify. All rights reserved.</p>
+        </div>
+        <div class="flex space-x-4">
+          <a href="#" class="hover:text-primary">Terms</a>
+          <a href="#" class="hover:text-primary">Privacy</a>
+          <a href="#" class="hover:text-primary">Contact</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<!-- TradingView Lightweight Charts CSS -->
+<style>
+  .chart-container {
+    height: 500px;
+    position: relative;
+  }
+  .tv-lightweight-charts {
+    width: 100%;
+    height: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-xl mb-6">
+  <div class="card-body">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+      <h2 class="card-title text-2xl">Charts</h2>
+      
+      <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+        <!-- Symbol Selector -->
+        <div class="form-control">
+          <select id="symbol-selector" class="select select-bordered">
+            <option value="" disabled {% if not symbol %}selected{% endif %}>Select Symbol</option>
+            {% for item in watchlist_items %}
+              <option value="{{ item.symbol }}" {% if symbol == item.symbol %}selected{% endif %}>{{ item.symbol }} - {{ item.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Timeframe Selector -->
+        <div class="form-control">
+          <select id="timeframe-selector" class="select select-bordered">
+            <option value="1m" {% if timeframe == '1m' %}selected{% endif %}>1 Minute</option>
+            <option value="5m" {% if timeframe == '5m' %}selected{% endif %}>5 Minutes</option>
+            <option value="15m" {% if timeframe == '15m' %}selected{% endif %}>15 Minutes</option>
+            <option value="30m" {% if timeframe == '30m' %}selected{% endif %}>30 Minutes</option>
+            <option value="1h" {% if timeframe == '1h' %}selected{% endif %}>1 Hour</option>
+            <option value="1d" {% if timeframe == '1d' or not timeframe %}selected{% endif %}>Daily</option>
+            <option value="1w" {% if timeframe == '1w' %}selected{% endif %}>Weekly</option>
+          </select>
+        </div>
+        
+        <!-- Auto-update Toggle -->
+        <div class="form-control">
+          <label class="label cursor-pointer">
+            <span class="label-text mr-2">Auto-update</span>
+            <input type="checkbox" class="toggle toggle-primary" id="auto-update-toggle" checked />
+          </label>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Chart Controls -->
+    <div class="tabs tabs-boxed mb-4">
+      <a class="tab tab-active" data-chart-type="candles">Candles</a>
+      <a class="tab" data-chart-type="line">Line</a>
+      <a class="tab" data-chart-type="area">Area</a>
+    </div>
+    
+    <div id="chart-container" class="chart-container">
+      <!-- Chart will be rendered here -->
+      <div class="flex items-center justify-center h-full" id="chart-placeholder">
+        <div class="text-center">
+          <span class="loading loading-spinner loading-lg"></span>
+          <p class="mt-4">Select a symbol to display chart</p>
+        </div>
+      </div>
+      <div id="tv-chart-container" class="tv-lightweight-charts" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart Indicators Card -->
+<div class="card bg-base-100 shadow-xl mb-6">
+  <div class="card-body">
+    <h2 class="card-title">Indicators</h2>
+    
+    <div class="flex flex-wrap gap-4 mt-2">
+      <!-- Moving Average -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Moving Average</span>
+        </label>
+        <div class="flex gap-2">
+          <select id="ma-type" class="select select-sm select-bordered">
+            <option value="ema">EMA</option>
+            <option value="sma">SMA</option>
+          </select>
+          <input type="number" id="ma-period" class="input input-sm input-bordered w-20" value="20" min="1" max="200">
+          <button id="add-ma-btn" class="btn btn-sm btn-primary">Add</button>
+        </div>
+      </div>
+      
+      <!-- RSI -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">RSI</span>
+        </label>
+        <div class="flex gap-2">
+          <input type="number" id="rsi-period" class="input input-sm input-bordered w-20" value="14" min="1" max="200">
+          <button id="add-rsi-btn" class="btn btn-sm btn-primary">Add</button>
+        </div>
+      </div>
+      
+      <!-- MACD -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">MACD</span>
+        </label>
+        <div class="flex gap-2">
+          <button id="add-macd-btn" class="btn btn-sm btn-primary">Add</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Active Indicators -->
+    <div class="mt-4">
+      <h3 class="font-medium">Active Indicators</h3>
+      <div id="active-indicators" class="flex flex-wrap gap-2 mt-2">
+        <!-- Will be populated by JavaScript -->
+        <span class="badge badge-outline">No active indicators</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data Summary Card -->
+<div class="card bg-base-100 shadow-xl mb-6">
+  <div class="card-body">
+    <h2 class="card-title">Data Summary</h2>
+    
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Date Range</th>
+            <th>Records</th>
+            <th>Last Update</th>
+          </tr>
+        </thead>
+        <tbody id="data-summary-table">
+          <!-- Will be populated by JavaScript -->
+          <tr>
+            <td colspan="4" class="text-center">
+              <span>No data available</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- TradingView Lightweight Charts -->
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

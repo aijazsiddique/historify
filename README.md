@@ -106,7 +106,7 @@ historify/
 - **Backend**: Flask, SQLAlchemy, SQLite
 - **Frontend**: Tailwind CSS, DaisyUI, TradingView Lightweight Charts 3.8.0
 - **Data Handling**: Python data processing utilities, Pandas for technical indicators
-- **API Integration**: Yahoo Finance API for historical data
+- **API Integration**: OpenAlgo API for historical data and quotes
 
 ## TradingView Charts Implementation
 

@@ -29,6 +29,10 @@
             <span class="label-text">Select Symbols (from Watchlist)</span>
           </label>
           <div id="symbol-selector" class="border rounded-lg p-3 max-h-40 overflow-y-auto">
+            <div class="flex items-center mb-2">
+              <input type="checkbox" id="select-all-symbols" class="checkbox checkbox-primary" />
+              <span class="ml-2 font-semibold">Select All</span>
+            </div>
             <div class="flex flex-col gap-2" id="symbol-checkboxes">
               <!-- Will be populated by JavaScript -->
               <div class="flex items-center">
@@ -37,6 +41,20 @@
               </div>
             </div>
           </div>
+        </div>
+        
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">Interval</span>
+          </label>
+          <select class="select select-bordered w-full" id="interval-select">
+            <option value="1m">1 Minute</option>
+            <option value="5m">5 Minutes</option>
+            <option value="15m">15 Minutes</option>
+            <option value="30m">30 Minutes</option>
+            <option value="1h">1 Hour</option>
+            <option value="D" selected>Daily</option>
+          </select>
         </div>
         
         <div class="form-control mb-4">

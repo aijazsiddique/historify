@@ -9,6 +9,7 @@ from app.models import db
 from app.models.stock_data import StockData
 from app.models.watchlist import WatchlistItem
 from app.models.checkpoint import Checkpoint
+from app.models.dynamic_tables import ensure_table_exists, get_data_by_timeframe
 from app.utils.data_fetcher import fetch_historical_data, fetch_realtime_quotes, OPENALGO_AVAILABLE
 
 api_bp = Blueprint('api', __name__)
@@ -34,6 +35,7 @@ def download_data():
     start_date = data.get('start_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
     end_date = data.get('end_date', datetime.now().strftime('%Y-%m-%d'))
     mode = data.get('mode', 'fresh')  # 'fresh' or 'continue'
+    interval = data.get('interval', 'D')  # Default to daily if not provided
     
     # Get exchanges from request or default to NSE
     exchanges = data.get('exchanges', [])
@@ -66,7 +68,7 @@ def download_data():
             try:
                 # Use the corresponding exchange for this symbol
                 exchange = exchanges[symbols.index(symbol)] if symbol in symbols and symbols.index(symbol) < len(exchanges) else 'NSE'
-                historical_data = fetch_historical_data(symbol, start_date, end_date, exchange=exchange)
+                historical_data = fetch_historical_data(symbol, start_date, end_date, interval=interval, exchange=exchange)
             except ValueError as e:
                 results['failed'].append({
                     'symbol': symbol,
@@ -74,11 +76,13 @@ def download_data():
                 })
                 continue
             
-            # Store in database
+            # Get the dynamic table model for this symbol-exchange-interval combination
+            table_model = ensure_table_exists(symbol, exchange, interval)
+            
+            # Store in database using the dynamic table
             for data_point in historical_data:
-                # Check if the data point exists
-                existing = StockData.query.filter_by(
-                    symbol=symbol,
+                # Check if the data point exists in the dynamic table
+                existing = table_model.query.filter_by(
                     date=data_point['date'],
                     time=data_point['time']
                 ).first()
@@ -91,9 +95,8 @@ def download_data():
                     existing.close = data_point['close']
                     existing.volume = data_point['volume']
                 else:
-                    # Create new data point
-                    new_data = StockData(
-                        symbol=symbol,
+                    # Create new data point in the dynamic table
+                    new_data = table_model(
                         date=data_point['date'],
                         time=data_point['time'],
                         open=data_point['open'],
@@ -134,7 +137,8 @@ def get_data():
     symbol = request.args.get('symbol')
     start_date = request.args.get('start_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
     end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
-    timeframe = request.args.get('timeframe', '1d')
+    interval = request.args.get('interval', 'D')  # Changed from timeframe to interval for consistency
+    exchange = request.args.get('exchange', 'NSE')  # Default to NSE if not provided
     
     if not symbol:
         return jsonify({'error': 'Symbol is required'}), 400
@@ -144,8 +148,8 @@ def get_data():
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
         
-        # Fetch data from database
-        data = StockData.get_data_by_timeframe(symbol, start_date_obj, end_date_obj, timeframe)
+        # Fetch data from the dynamic table for this symbol-exchange-interval
+        data = get_data_by_timeframe(symbol, exchange, interval, start_date_obj, end_date_obj)
         
         # Format data for TradingView charts
         ohlcv_data = []
@@ -157,7 +161,10 @@ def get_data():
                 'high': item.high,
                 'low': item.low,
                 'close': item.close,
-                'volume': item.volume
+                'volume': item.volume,
+                'symbol': symbol,
+                'exchange': exchange,
+                'interval': interval
             })
         
         return jsonify(ohlcv_data)

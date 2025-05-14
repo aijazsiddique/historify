@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Historify{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Data Download Dashboard</h1>
+
+    <form id="download-form" class="card bg-base-100 shadow-xl p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h2 class="text-xl font-semibold mb-3">1. Select Symbols</h2>
+                <div class="form-control mb-2">
+                  <label class="label cursor-pointer justify-start">
+                    <input type="checkbox" id="select-all-symbols" class="checkbox checkbox-secondary" />
+                    <span class="label-text ml-2 font-semibold">Select All / Deselect All</span>
+                  </label>
+                </div>
+                <div id="symbol-checkboxes" class="max-h-60 overflow-y-auto bg-base-200 p-3 rounded-md grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                    <!-- Symbol checkboxes will be loaded here by dashboard.js -->
+                    <span class="loading loading-dots loading-md"></span> Loading symbols...
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-semibold mb-3">2. Select Interval</h2>
+                <div class="form-control mb-4">
+                    <label class="label" for="interval-select">
+                        <span class="label-text">Interval:</span>
+                    </label>
+                    <select id="interval-select" class="select select-bordered w-full">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="D" selected>Daily</option>
+                    </select>
+                </div>
+                <h2 class="text-xl font-semibold mb-3">2. Select Interval</h2>
+                <div class="form-control mb-4">
+                    <label class="label" for="interval-select">
+                        <span class="label-text">Interval:</span>
+                    </label>
+                    <select id="interval-select" class="select select-bordered w-full">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="D" selected>Daily</option>
+                    </select>
+                </div>
+                <h2 class="text-xl font-semibold mb-3">3. Select Date Range</h2>
+                <div class="form-control mb-4">
+                    <label class="label" for="date-range">
+                        <span class="label-text">Choose Range:</span>
+                    </label>
+                    <select id="date-range" class="select select-bordered w-full">
+                        <option value="30d" selected>Last 30 Days</option>
+                        <option value="5d">Last 5 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                        <option value="1y">Last 1 Year</option>
+                        <option value="2y">Last 2 Years</option>
+                        <option value="5y">Last 5 Years</option>
+                        <option value="10y">Last 10 Years</option>
+                        <option value="today">Today</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+
+                <div id="custom-date-range" class="hidden grid grid-cols-2 gap-4 mb-4">
+                    <div class="form-control">
+                        <label class="label" for="start-date">
+                            <span class="label-text">Start Date:</span>
+                        </label>
+                        <input type="date" id="start-date" class="input input-bordered w-full" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label" for="end-date">
+                            <span class="label-text">End Date:</span>
+                        </label>
+                        <input type="date" id="end-date" class="input input-bordered w-full" />
+                    </div>
+                </div>
+
+                <h2 class="text-xl font-semibold mb-3">3. Download Mode</h2>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Fresh Download (overwrite existing for range)</span> 
+                        <input type="radio" name="download-mode" class="radio radio-primary" value="fresh" checked />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Continue Download (from last checkpoint)</span> 
+                        <input type="radio" name="download-mode" class="radio radio-primary" value="continue" />
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-end">
+            <button id="download-btn" type="submit" class="btn btn-primary">
+                <span>Download Data</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+            </button>
+        </div>
+    </form>
+
+    <div id="download-status" class="mt-6 space-y-2"></div>
+    
+    <!-- Placeholder for latest data table if needed -->
+    <!-- <div id="latest-data-table-container" class="mt-8"> -->
+    <!--   <h2 class="text-xl font-semibold mb-3">Latest Data Overview</h2> -->
+    <!--   <div id="latest-data-table"></div> -->
+    <!-- </div> -->
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

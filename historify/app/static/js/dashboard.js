@@ -4,7 +4,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   // Elements
-  const symbolCheckboxes = document.getElementById('symbol-checkboxes');
+  const symbolCheckboxesContainer = document.getElementById('symbol-checkboxes');
+  const selectAllCheckbox = document.getElementById('select-all-symbols');
+  const intervalSelect = document.getElementById('interval-select');
   const dateRangeSelect = document.getElementById('date-range');
   const customDateRange = document.getElementById('custom-date-range');
   const startDateInput = document.getElementById('start-date');
@@ -31,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listeners
   dateRangeSelect.addEventListener('change', handleDateRangeChange);
   downloadForm.addEventListener('submit', handleDownloadSubmit);
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', handleSelectAllChange);
+  }
+  // Listen for changes in the symbol checkboxes container to rebind select-all if needed
+  symbolCheckboxesContainer.addEventListener('change', (e) => {
+    if (e.target.classList.contains('symbol-checkbox')) {
+      updateSelectAllCheckboxState();
+    }
+  });
   
   /**
    * Load watchlist symbols to populate checkboxes
@@ -40,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(response => response.json())
       .then(data => {
         if (data.length === 0) {
-          symbolCheckboxes.innerHTML = `
+          symbolCheckboxesContainer.innerHTML = `
             <div class="alert alert-info">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -56,18 +67,24 @@ document.addEventListener('DOMContentLoaded', () => {
           checkboxesHtml += `
             <div class="form-control">
               <label class="label cursor-pointer justify-start">
-                <input type="checkbox" class="checkbox checkbox-primary symbol-checkbox" value="${item.symbol}" />
-                <span class="label-text ml-2">${item.symbol} - ${item.name || item.symbol}</span>
+                <input type="checkbox" class="checkbox checkbox-primary symbol-checkbox" value="${item.symbol}" data-exchange="${item.exchange}"/>
+                <span class="label-text ml-2">${item.symbol} (${item.exchange}) - ${item.name || item.symbol}</span>
               </label>
             </div>
           `;
         });
         
-        symbolCheckboxes.innerHTML = checkboxesHtml;
+        symbolCheckboxesContainer.innerHTML = checkboxesHtml;
+        // Add event listeners to newly created checkboxes for individual changes
+        const individualSymbolCheckboxes = document.querySelectorAll('.symbol-checkbox');
+        individualSymbolCheckboxes.forEach(checkbox => {
+          checkbox.addEventListener('change', updateSelectAllCheckboxState);
+        });
+        updateSelectAllCheckboxState(); // Initial check for Select All state
       })
       .catch(error => {
         console.error('Error loading watchlist:', error);
-        symbolCheckboxes.innerHTML = `
+        symbolCheckboxesContainer.innerHTML = `
           <div class="alert alert-error">
             <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -89,6 +106,36 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       customDateRange.classList.add('hidden');
     }
+  }
+  
+  /**
+   * Handle Select All checkbox change
+   */
+  function handleSelectAllChange() {
+    const individualSymbolCheckboxes = document.querySelectorAll('.symbol-checkbox');
+    individualSymbolCheckboxes.forEach(checkbox => {
+      checkbox.checked = selectAllCheckbox.checked;
+    });
+    updateSelectAllCheckboxState();
+  }
+
+  /**
+   * Update Select All checkbox based on individual checkbox states
+   */
+  function updateSelectAllCheckboxState() {
+    if (!selectAllCheckbox) return; // Guard if select-all is not on the page
+    const individualSymbolCheckboxes = document.querySelectorAll('.symbol-checkbox');
+    const allChecked = Array.from(individualSymbolCheckboxes).every(cb => cb.checked);
+    const someChecked = Array.from(individualSymbolCheckboxes).some(cb => cb.checked);
+    
+    if (individualSymbolCheckboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        return;
+    }
+
+    selectAllCheckbox.checked = allChecked;
+    selectAllCheckbox.indeterminate = !allChecked && someChecked;
   }
   
   /**
@@ -143,10 +190,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDownloadSubmit(event) {
     event.preventDefault();
     
-    // Get selected symbols
+    // Get selected symbols and their exchanges
     const checkboxes = document.querySelectorAll('.symbol-checkbox:checked');
     const symbols = Array.from(checkboxes).map(cb => cb.value);
-    
+    const exchanges = Array.from(checkboxes).map(cb => cb.dataset.exchange || 'NSE'); // Get exchange from data attribute, default to NSE
+    const interval = intervalSelect ? intervalSelect.value : 'D'; // get selected interval
+
     if (symbols.length === 0) {
       showStatus('error', 'Please select at least one symbol.');
       return;
@@ -173,6 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       body: JSON.stringify({
         symbols,
+        exchanges,
+        interval, // send interval to backend
         start_date: startDate,
         end_date: endDate,
         mode: downloadMode
@@ -204,13 +255,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadLatestData();
       })
       .catch(error => {
-        console.error('Error downloading data:', error);
         downloadBtn.disabled = false;
-        downloadBtn.innerHTML = `<span>Download Data</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>`;
-        showStatus('error', `Error: ${error.message}`);
+        downloadBtn.innerHTML = `<span>Download Data</span>`;
+        showStatus('error', 'Download failed. Please try again.');
+        console.error('Download error:', error);
       });
   }
   

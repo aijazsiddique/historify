@@ -79,14 +79,54 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
             symbol=symbol,
             exchange=exchange,
             interval=openalgo_interval,
-            from_date=start_date,
-            to_date=end_date
+            start_date=start_date,
+            end_date=end_date
         )
         
-        logging.info(f"API response status: {response.get('status', 'unknown')}")
+        # Check if response is a pandas DataFrame (as seen in the sample response)
+        import pandas as pd
         
-        if response.get('status') == 'success' and 'data' in response:
-            # Process and format the response data
+        if isinstance(response, pd.DataFrame):
+            logging.info(f"Received pandas DataFrame with {len(response)} rows for {symbol}")
+            
+            if response.empty:
+                logging.warning(f"Empty DataFrame received for {symbol}")
+                return []
+            
+            # Process the DataFrame data
+            data = []
+            
+            # Convert DataFrame to our internal format
+            for idx, row in response.iterrows():
+                # Extract date and time from the index (timestamp)
+                timestamp = idx
+                if isinstance(timestamp, str):
+                    # Parse the timestamp string if needed
+                    try:
+                        timestamp = pd.to_datetime(timestamp)
+                    except Exception as e:
+                        logging.error(f"Error parsing timestamp {timestamp}: {e}")
+                        continue
+                
+                date_obj = timestamp.date()
+                time_obj = timestamp.time()
+                
+                data.append({
+                    'date': date_obj,
+                    'time': time_obj,
+                    'open': float(row.get('open', 0)),
+                    'high': float(row.get('high', 0)),
+                    'low': float(row.get('low', 0)),
+                    'close': float(row.get('close', 0)),
+                    'volume': int(row.get('volume', 0)),
+                    'exchange': exchange
+                })
+            
+            return data
+            
+        # Handle traditional JSON response format (keeping as fallback)
+        elif isinstance(response, dict) and response.get('status') == 'success' and 'data' in response:
+            # Process and format the JSON response data
             data = []
             for item in response['data']:
                 # Format may vary based on actual API response structure
@@ -103,12 +143,18 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
                     'high': float(item.get('high', 0)),
                     'low': float(item.get('low', 0)),
                     'close': float(item.get('close', 0)),
-                    'volume': int(item.get('volume', 0))
+                    'volume': int(item.get('volume', 0)),
+                    'exchange': exchange
                 })
             
             return data
         else:
-            error_msg = response.get('message', 'Unknown API error')
+            # If it's neither a DataFrame nor a valid JSON response
+            if isinstance(response, dict) and 'message' in response:
+                error_msg = response.get('message', 'Unknown API error')
+            else:
+                error_msg = 'Unknown API error or unsupported response format'
+            
             logging.error(f"API error for {symbol}: {error_msg}")
             raise ValueError(f"API error: {error_msg}")
             
@@ -367,18 +413,21 @@ def get_supported_exchanges():
 
 def convert_interval_format(interval):
     """Convert internal interval format to OpenAlgo format"""
-    # Map of internal interval format to OpenAlgo format
-    # This mapping may need adjustment based on actual API documentation
+    # Map of internal interval format to OpenAlgo format based on API error message
+    # Supported timeframes are: 1m, 3m, 5m, 10m, 15m, 30m, 1h, D
     interval_map = {
-        '1m': '1minute',
-        '5m': '5minute',
-        '15m': '15minute',
-        '30m': '30minute',
-        '1h': '1hour',
-        '1d': '1day',
-        '1w': '1week'
+        '1m': '1m',
+        '3m': '3m',
+        '5m': '5m',
+        '10m': '10m',
+        '15m': '15m',
+        '30m': '30m',
+        '1h': '1h',
+        '1d': 'D',  # Daily timeframe uses 'D' instead of '1day'
+        'D': 'D',   # Alternative format
+        '1w': 'W'    # Weekly - this might not be supported, will use default if not
     }
-    return interval_map.get(interval, '1day')  # Default to 1day if not found
+    return interval_map.get(interval, 'D')  # Default to D (daily) if not found
 
 def get_supported_intervals():
     """Get list of supported intervals"""

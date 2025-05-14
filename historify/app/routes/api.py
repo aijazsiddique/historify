@@ -55,75 +55,94 @@ def download_data():
         'message': 'Download initiated'
     }
     
-    # Process each symbol
-    for symbol in symbols:
-        try:
-            # If mode is 'continue', check the checkpoint for the last downloaded date
-            if mode == 'continue':
-                checkpoint = Checkpoint.query.filter_by(symbol=symbol).first()
-                if checkpoint and checkpoint.last_downloaded_date:
-                    start_date = (checkpoint.last_downloaded_date + timedelta(days=1)).strftime('%Y-%m-%d')
-            
-            # Fetch historical data
+    # Process symbols in batches to respect rate limits
+    BATCH_SIZE = 10  # Process 10 symbols per batch
+    
+    for i in range(0, len(symbols), BATCH_SIZE):
+        batch_symbols = symbols[i:i+BATCH_SIZE]
+        batch_exchanges = exchanges[i:i+BATCH_SIZE]
+        
+        logging.info(f"Processing batch {i//BATCH_SIZE + 1} of {(len(symbols) + BATCH_SIZE - 1)//BATCH_SIZE} ({len(batch_symbols)} symbols)")
+        
+        # Process each symbol in the batch
+        for j, symbol in enumerate(batch_symbols):
             try:
-                # Use the corresponding exchange for this symbol
-                exchange = exchanges[symbols.index(symbol)] if symbol in symbols and symbols.index(symbol) < len(exchanges) else 'NSE'
-                historical_data = fetch_historical_data(symbol, start_date, end_date, interval=interval, exchange=exchange)
-            except ValueError as e:
+                # If mode is 'continue', check the checkpoint for the last downloaded date
+                if mode == 'continue':
+                    checkpoint = Checkpoint.query.filter_by(symbol=symbol).first()
+                    if checkpoint and checkpoint.last_downloaded_date:
+                        symbol_start_date = (checkpoint.last_downloaded_date + timedelta(days=1)).strftime('%Y-%m-%d')
+                    else:
+                        symbol_start_date = start_date
+                else:
+                    symbol_start_date = start_date
+                
+                # Fetch historical data
+                try:
+                    # Use the corresponding exchange for this symbol
+                    exchange = batch_exchanges[j]
+                    historical_data = fetch_historical_data(symbol, symbol_start_date, end_date, interval=interval, exchange=exchange)
+                except ValueError as e:
+                    results['failed'].append({
+                        'symbol': symbol,
+                        'error': str(e)
+                    })
+                    continue
+                
+                # Get the dynamic table model for this symbol-exchange-interval combination
+                table_model = ensure_table_exists(symbol, exchange, interval)
+                
+                # Store in database using the dynamic table
+                for data_point in historical_data:
+                    # Check if the data point exists in the dynamic table
+                    existing = table_model.query.filter_by(
+                        date=data_point['date'],
+                        time=data_point['time']
+                    ).first()
+                    
+                    if existing:
+                        # Update existing data
+                        existing.open = data_point['open']
+                        existing.high = data_point['high']
+                        existing.low = data_point['low']
+                        existing.close = data_point['close']
+                        existing.volume = data_point['volume']
+                    else:
+                        # Create new data point in the dynamic table
+                        new_data = table_model(
+                            date=data_point['date'],
+                            time=data_point['time'],
+                            open=data_point['open'],
+                            high=data_point['high'],
+                            low=data_point['low'],
+                            close=data_point['close'],
+                            volume=data_point['volume']
+                        )
+                        db.session.add(new_data)
+                
+                # Update checkpoint
+                checkpoint = Checkpoint.query.filter_by(symbol=symbol).first()
+                if not checkpoint:
+                    checkpoint = Checkpoint(symbol=symbol)
+                    db.session.add(checkpoint)
+                
+                checkpoint.last_downloaded_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                checkpoint.last_downloaded_time = datetime.now().time()
+                
+                # Commit the transaction for this symbol
+                db.session.commit()
+                
+                # Add to success list (only add once)
+                results['success'].append(symbol)
+                
+            except Exception as e:
+                # Handle any other exceptions
                 results['failed'].append({
                     'symbol': symbol,
                     'error': str(e)
                 })
+                logging.error(f"Error processing {symbol}: {str(e)}")
                 continue
-            
-            # Get the dynamic table model for this symbol-exchange-interval combination
-            table_model = ensure_table_exists(symbol, exchange, interval)
-            
-            # Store in database using the dynamic table
-            for data_point in historical_data:
-                # Check if the data point exists in the dynamic table
-                existing = table_model.query.filter_by(
-                    date=data_point['date'],
-                    time=data_point['time']
-                ).first()
-                
-                if existing:
-                    # Update existing data
-                    existing.open = data_point['open']
-                    existing.high = data_point['high']
-                    existing.low = data_point['low']
-                    existing.close = data_point['close']
-                    existing.volume = data_point['volume']
-                else:
-                    # Create new data point in the dynamic table
-                    new_data = table_model(
-                        date=data_point['date'],
-                        time=data_point['time'],
-                        open=data_point['open'],
-                        high=data_point['high'],
-                        low=data_point['low'],
-                        close=data_point['close'],
-                        volume=data_point['volume']
-                    )
-                    db.session.add(new_data)
-            
-            # Update checkpoint
-            checkpoint = Checkpoint.query.filter_by(symbol=symbol).first()
-            if not checkpoint:
-                checkpoint = Checkpoint(symbol=symbol)
-                db.session.add(checkpoint)
-            
-            checkpoint.last_downloaded_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-            checkpoint.last_downloaded_time = datetime.now().time()
-            
-            db.session.commit()
-            results['success'].append(symbol)
-            
-        except Exception as e:
-            results['failed'].append({
-                'symbol': symbol,
-                'error': str(e)
-            })
     
     if len(results['failed']) > 0:
         results['status'] = 'partial'

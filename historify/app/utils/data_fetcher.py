@@ -3,15 +3,14 @@ Historify - Stock Historical Data Management App
 Data Fetcher Utility
 """
 import os
-import json
-from datetime import datetime, timedelta
-import requests
-from flask import current_app
-
-# Import OpenAlgo API client
 import logging
-import random  # Import random unconditionally for fallback
+import random
+import json
 import sys
+import time
+from datetime import datetime, timedelta, time as dt_time
+from flask import current_app, has_app_context
+from app.utils.rate_limiter import broker_rate_limiter, batch_process
 
 # Log Python path for debugging
 logging.info(f"Python path: {sys.path}")
@@ -34,12 +33,14 @@ except Exception as e:
 # In a real app, we would use the actual OpenAlgo Python client
 # For now, we'll simulate data fetching
 
+@broker_rate_limiter
 def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange='NSE'):
     """
     Fetch historical stock data from OpenAlgo API
     
     Uses the OpenAlgo API client to fetch real historical data.
     No longer falls back to generated mock data if API is unavailable.
+    Rate limited to respect broker's limit of 10 symbols per second.
     
     Args:
         symbol: Stock symbol to fetch
@@ -317,6 +318,9 @@ def fetch_realtime_quotes(symbols, exchanges=None):
     # Default to NSE if exchanges is not provided
     if exchanges is None:
         exchanges = ['NSE'] * len(symbols)
+    elif len(exchanges) < len(symbols):
+        # Extend exchanges list if it's shorter than symbols list
+        exchanges.extend(['NSE'] * (len(symbols) - len(exchanges)))
     
     if not OPENALGO_AVAILABLE:
         logging.error("Cannot fetch quotes: OpenAlgo API module is not available")
@@ -330,54 +334,77 @@ def fetch_realtime_quotes(symbols, exchanges=None):
     logging.info(f"Initializing OpenAlgo client with host: {host}")
     client = api(api_key=api_key, host=host)
     
-    for i, symbol in enumerate(symbols):
-        try:
-            # Use the corresponding exchange for this symbol
-            exchange = exchanges[i] if i < len(exchanges) else 'NSE'
-            logging.info(f"Fetching quote for {symbol} from exchange {exchange}")
-            response = client.quotes(symbol=symbol, exchange=exchange)
-            
-            if response.get('status') == 'success' and 'data' in response:
-                quote_data = response['data']
+    # Prepare symbol-exchange pairs for batch processing
+    symbol_exchange_pairs = list(zip(symbols, exchanges))
+    
+    # Process in batches of 10 symbols per second to respect rate limits
+    BATCH_SIZE = 10
+    
+    # Process a batch of symbols
+    for i in range(0, len(symbol_exchange_pairs), BATCH_SIZE):
+        batch = symbol_exchange_pairs[i:i+BATCH_SIZE]
+        logging.info(f"Processing batch {i//BATCH_SIZE + 1} of {(len(symbol_exchange_pairs) + BATCH_SIZE - 1)//BATCH_SIZE} ({len(batch)} symbols)")
+        
+        for symbol, exchange in batch:
+            try:
+                logging.info(f"Fetching quote for {symbol} from exchange {exchange}")
+                # Apply rate limiter to each API call
+                response = client.quotes(symbol=symbol, exchange=exchange)
                 
-                # Calculate change percentage
-                prev_close = quote_data.get('prev_close', 0)
-                ltp = quote_data.get('ltp', 0)
-                
-                if prev_close > 0:
-                    change_percent = ((ltp - prev_close) / prev_close) * 100
+                if response.get('status') == 'success' and 'data' in response:
+                    quote_data = response['data']
+                    
+                    # Calculate change percentage
+                    prev_close = quote_data.get('prev_close', 0)
+                    ltp = quote_data.get('ltp', 0)
+                    
+                    if prev_close > 0:
+                        change_percent = ((ltp - prev_close) / prev_close) * 100
+                    else:
+                        change_percent = 0
+                    
+                    quotes.append({
+                        'symbol': symbol,
+                        'exchange': exchange,
+                        'ltp': quote_data.get('ltp', 0),
+                        'change': quote_data.get('change', 0),
+                        'change_percent': round(change_percent, 2),
+                        'volume': quote_data.get('volume', 0),
+                        'bid': quote_data.get('bid', 0),
+                        'ask': quote_data.get('ask', 0),
+                        'high': quote_data.get('high', 0),
+                        'low': quote_data.get('low', 0),
+                        'open': quote_data.get('open', 0),
+                        'prev_close': quote_data.get('prev_close', 0),
+                        'timestamp': quote_data.get('timestamp', datetime.now().isoformat())
+                    })
                 else:
-                    change_percent = 0
-                
+                    error_msg = response.get('message', 'Unknown API error')
+                    logging.error(f"API error for {symbol}: {error_msg}")
+                    quotes.append({
+                        'symbol': symbol,
+                        'exchange': exchange,
+                        'error': error_msg,
+                        'ltp': 0,
+                        'change_percent': 0,
+                        'timestamp': datetime.now().isoformat()
+                    })
+            except Exception as e:
+                logging.error(f"Error fetching quote for {symbol}: {str(e)}")
+                # Add a placeholder with error information
                 quotes.append({
                     'symbol': symbol,
                     'exchange': exchange,
-                    'price': quote_data.get('ltp', 0),
-                    'change': round(change_percent, 2),
-                    'open': quote_data.get('open', 0),
-                    'high': quote_data.get('high', 0),
-                    'low': quote_data.get('low', 0),
-                    'volume': quote_data.get('volume', 0),
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    'error': str(e),
+                    'ltp': 0,
+                    'change_percent': 0,
+                    'timestamp': datetime.now().isoformat()
                 })
-            else:
-                # If API returns error, log it but don't fail the entire request
-                error_msg = response.get('message', 'Unknown API error')
-                logging.error(f"API error for {symbol} from {exchange}: {error_msg}")
-                quotes.append({
-                    'symbol': symbol,
-                    'exchange': exchange,
-                    'error': f"API error: {error_msg}",
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                })
-        except Exception as e:
-            logging.error(f"Error fetching quote for {symbol} from {exchange}: {str(e)}")
-            quotes.append({
-                'symbol': symbol,
-                'exchange': exchange, 
-                'error': f"Error: {str(e)}",
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            })
+        
+        # If this isn't the last batch, wait to respect rate limits
+        if i + BATCH_SIZE < len(symbol_exchange_pairs):
+            logging.info(f"Processed batch of {len(batch)} symbols. Waiting before next batch.")
+            time.sleep(1.0)  # Wait 1 second between batches
     
     return quotes
 

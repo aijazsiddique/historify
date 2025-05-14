@@ -27,8 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load watchlist symbols for checkboxes
   loadWatchlistSymbols();
   
-  // Load latest data information
-  loadLatestData();
+  // Latest data section has been removed
   
   // Event listeners
   dateRangeSelect.addEventListener('change', handleDateRangeChange);
@@ -251,8 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
           showStatus('error', data.message || 'Download failed.');
         }
         
-        // Refresh latest data table
-        loadLatestData();
+        // Latest data section has been removed, so no need to refresh it
       })
       .catch(error => {
         downloadBtn.disabled = false;
@@ -309,47 +307,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  /**
-   * Load latest data information
-   */
-  function loadLatestData() {
-    // This would be replaced with a real API call in a production app
-    // For now, we'll simulate data
-    
-    // Simulate loading delay for demo purposes
-    setTimeout(() => {
-      // In a real app, this would fetch data from an endpoint
-      const mockData = [
-        { symbol: 'RELIANCE', lastUpdate: '2025-05-13', records: 1287, startDate: '2023-05-13', endDate: '2025-05-13' },
-        { symbol: 'TCS', lastUpdate: '2025-05-13', records: 985, startDate: '2023-11-22', endDate: '2025-05-13' },
-        { symbol: 'INFY', lastUpdate: '2025-05-12', records: 756, startDate: '2024-01-15', endDate: '2025-05-12' }
-      ];
-      
-      if (mockData.length === 0) {
-        latestDataTable.innerHTML = `
-          <tr>
-            <td colspan="5" class="text-center">No data available</td>
-          </tr>
-        `;
-        return;
-      }
-      
-      let tableHtml = '';
-      mockData.forEach(item => {
-        tableHtml += `
-          <tr>
-            <td>${item.symbol}</td>
-            <td>${item.lastUpdate}</td>
-            <td>${item.records.toLocaleString()}</td>
-            <td>${item.startDate} to ${item.endDate}</td>
-            <td>
-              <a href="/charts?symbol=${item.symbol}" class="btn btn-sm btn-outline">View Chart</a>
-            </td>
-          </tr>
-        `;
-      });
-      
-      latestDataTable.innerHTML = tableHtml;
-    }, 1000);
-  }
+  // loadLatestData function removed as requested
 });

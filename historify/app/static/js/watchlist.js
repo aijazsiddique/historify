@@ -69,14 +69,44 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(quotes => {
             // Create a map of symbol -> quote data for easy lookup
             const quotesMap = {};
-            quotes.forEach(quote => {
-              quotesMap[quote.symbol] = quote;
-            });
+            
+            console.log('API Response:', quotes); // Debug log
+            
+            // From the screenshot, we can see the API returns an array of objects
+            // Each object has properties like bid, ask, change, change_percent, etc.
+            if (Array.isArray(quotes)) {
+              quotes.forEach(quote => {
+                if (quote && quote.symbol) {
+                  // Extract the symbol from the quotes data
+                  const symbol = quote.symbol;
+                  
+                  // Create a quote object with the necessary properties
+                  // Looking at the screenshot, we need to use different field names
+                  quotesMap[symbol] = {
+                    symbol: symbol,
+                    // The API response shows 'ltp' field for NIFTY, but we should also check for 'bid'
+                    price: quote.ltp !== undefined ? parseFloat(quote.ltp) : 
+                           quote.bid !== undefined ? parseFloat(quote.bid) : 0,
+                    // The API shows 'change_percent' field
+                    change: quote.change_percent !== undefined ? parseFloat(quote.change_percent) : 0,
+                    volume: quote.volume !== undefined ? parseInt(quote.volume) : 0,
+                    exchange: quote.exchange || ''
+                  };
+                  
+                  console.log(`Processed ${symbol}: price=${quotesMap[symbol].price}, change=${quotesMap[symbol].change}`);
+                }
+              });
+            }
             
             // Create table rows
             let tableHtml = '';
             data.forEach(item => {
+              // Make sure quote has default values for price and change
               const quote = quotesMap[item.symbol] || { price: 0, change: 0 };
+              
+              // Ensure price and change are numbers with fallbacks
+              const price = typeof quote.price === 'number' ? quote.price : 0;
+              const change = typeof quote.change === 'number' ? quote.change : 0;
               
               // Check if quote has an error
               if (quote.error) {
@@ -112,17 +142,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
               }
               
-              const changeClass = quote.change >= 0 ? 'text-success' : 'text-error';
-              const changeIcon = quote.change >= 0 ? '↑' : '↓';
+              // Safe calculation of change class and icon
+              const changeClass = change >= 0 ? 'text-success' : 'text-error';
+              const changeIcon = change >= 0 ? '↑' : '↓';
               
               tableHtml += `
                 <tr>
                   <td>${item.symbol}</td>
                   <td>${item.name || item.symbol}</td>
                   <td>${item.exchange}</td>
-                  <td>${quote.price.toFixed(2)}</td>
+                  <td>${price.toFixed(2)}</td>
                   <td class="${changeClass}">
-                    ${changeIcon} ${Math.abs(quote.change).toFixed(2)}%
+                    ${changeIcon} ${Math.abs(change).toFixed(2)}%
                   </td>
                   <td>
                     <div class="flex gap-2">

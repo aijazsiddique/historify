@@ -2,27 +2,42 @@
  * Theme toggling functionality for Historify app
  */
 
-// Check for saved theme preference or use device preference
 document.addEventListener('DOMContentLoaded', () => {
+  // Get the theme toggle element
+  const themeToggle = document.getElementById('theme-toggle');
+  
   // Check for saved theme preference or use device preference
   const savedTheme = localStorage.getItem('historify-theme');
+  let currentTheme;
   
   if (savedTheme) {
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    currentTheme = savedTheme;
+    document.documentElement.setAttribute('data-theme', currentTheme);
   } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
     document.documentElement.setAttribute('data-theme', 'dark');
-  }
-
-  // Set up theme toggle buttons
-  const themeLight = document.getElementById('theme-light');
-  const themeDark = document.getElementById('theme-dark');
-
-  if (themeLight) {
-    themeLight.addEventListener('click', () => setTheme('light'));
+  } else {
+    currentTheme = 'light';
   }
   
-  if (themeDark) {
-    themeDark.addEventListener('click', () => setTheme('dark'));
+  // Set the initial state of the toggle based on the current theme
+  if (themeToggle) {
+    // If current theme is dark, the toggle should show the sun (to switch to light)
+    // If current theme is light, the toggle should show the moon (to switch to dark)
+    themeToggle.classList.toggle('swap-active', currentTheme === 'dark');
+    
+    // Add event listener for the toggle
+    themeToggle.addEventListener('click', () => {
+      // Get the current theme
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      
+      // Toggle the theme
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+      
+      // Toggle the active state of the swap component
+      themeToggle.classList.toggle('swap-active');
+    });
   }
 });
 
@@ -33,10 +48,4 @@ document.addEventListener('DOMContentLoaded', () => {
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('historify-theme', theme);
-  
-  // Close dropdown if it's open
-  const dropdowns = document.querySelectorAll('.dropdown-content');
-  dropdowns.forEach(dropdown => {
-    dropdown.removeAttribute('open');
-  });
 }

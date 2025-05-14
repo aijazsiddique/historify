@@ -60,8 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         
+        // Build URL with symbols and exchanges
+        const apiUrl = `/api/quotes?symbols=${data.map(item => item.symbol).join(',')}&exchanges=${data.map(item => item.exchange).join(',')}`;
+        
         // Get real-time quotes for watchlist items
-        fetch(`/api/quotes?symbols=${data.map(item => item.symbol).join(',')}`)
+        fetch(apiUrl)
           .then(response => response.json())
           .then(quotes => {
             // Create a map of symbol -> quote data for easy lookup
@@ -74,6 +77,41 @@ document.addEventListener('DOMContentLoaded', () => {
             let tableHtml = '';
             data.forEach(item => {
               const quote = quotesMap[item.symbol] || { price: 0, change: 0 };
+              
+              // Check if quote has an error
+              if (quote.error) {
+                tableHtml += `
+                  <tr>
+                    <td>${item.symbol}</td>
+                    <td>${item.name || item.symbol}</td>
+                    <td>${item.exchange}</td>
+                    <td colspan="2" class="text-error">
+                      <div class="tooltip" data-tip="${quote.error}">
+                        Error fetching data
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="flex gap-2">
+                        <a href="/charts?symbol=${item.symbol}&exchange=${item.exchange}" class="btn btn-sm btn-outline btn-primary">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                          </svg>
+                        </a>
+                        <button class="btn btn-sm btn-outline btn-error delete-btn" data-id="${item.id}" data-symbol="${item.symbol}" data-name="${item.name || item.symbol}">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+                return;
+              }
+              
               const changeClass = quote.change >= 0 ? 'text-success' : 'text-error';
               const changeIcon = quote.change >= 0 ? '↑' : '↓';
               

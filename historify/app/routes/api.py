@@ -4,11 +4,12 @@ API Routes Blueprint
 """
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, timedelta
+import logging
 from app.models import db
 from app.models.stock_data import StockData
 from app.models.watchlist import WatchlistItem
 from app.models.checkpoint import Checkpoint
-from app.utils.data_fetcher import fetch_historical_data, fetch_realtime_quotes
+from app.utils.data_fetcher import fetch_historical_data, fetch_realtime_quotes, OPENALGO_AVAILABLE
 
 api_bp = Blueprint('api', __name__)
 
@@ -34,6 +35,16 @@ def download_data():
     end_date = data.get('end_date', datetime.now().strftime('%Y-%m-%d'))
     mode = data.get('mode', 'fresh')  # 'fresh' or 'continue'
     
+    # Get exchanges from request or default to NSE
+    exchanges = data.get('exchanges', [])
+    
+    # If exchanges list is shorter than symbols list, extend it with default values
+    if len(exchanges) < len(symbols):
+        exchanges.extend(['NSE'] * (len(symbols) - len(exchanges)))
+    # If exchanges list is longer, truncate it
+    elif len(exchanges) > len(symbols):
+        exchanges = exchanges[:len(symbols)]
+    
     # Initialize results dictionary
     results = {
         'success': [],
@@ -52,8 +63,16 @@ def download_data():
                     start_date = (checkpoint.last_downloaded_date + timedelta(days=1)).strftime('%Y-%m-%d')
             
             # Fetch historical data
-            # In a production app, this would be a background task
-            historical_data = fetch_historical_data(symbol, start_date, end_date)
+            try:
+                # Use the corresponding exchange for this symbol
+                exchange = exchanges[symbols.index(symbol)] if symbol in symbols and symbols.index(symbol) < len(exchanges) else 'NSE'
+                historical_data = fetch_historical_data(symbol, start_date, end_date, exchange=exchange)
+            except ValueError as e:
+                results['failed'].append({
+                    'symbol': symbol,
+                    'error': str(e)
+                })
+                continue
             
             # Store in database
             for data_point in historical_data:
@@ -150,18 +169,70 @@ def get_data():
 def get_quotes():
     """Get real-time quotes for watchlist symbols"""
     symbols_param = request.args.get('symbols')
+    exchanges_param = request.args.get('exchanges') or request.args.get('exchange')
+    
+    # Initialize the results list
+    results = []
     
     if symbols_param:
         symbols = symbols_param.split(',')
+        
+        # If exchanges are provided, process them
+        if exchanges_param:
+            exchanges = exchanges_param.split(',')
+            # Ensure we have an exchange for each symbol
+            if len(exchanges) < len(symbols):
+                exchanges.extend(['NSE'] * (len(symbols) - len(exchanges)))
+        else:
+            # If no exchanges provided, try to guess based on symbol format
+            # But still default to NSE for safety
+            exchanges = []
+            for symbol in symbols:
+                if 'FUT' in symbol or any(month in symbol for month in ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']):
+                    exchanges.append('NFO')  # Futures and options
+                elif symbol.startswith(('GOLD', 'SILVER', 'CRUDE')):
+                    exchanges.append('MCX')  # Commodities
+                elif symbol.endswith(('USD', 'EUR', 'JPY', 'GBP')):
+                    exchanges.append('CDS')  # Currency derivatives
+                else:
+                    exchanges.append('NSE')  # Default to NSE for stocks
     else:
+        # Get symbols and exchanges from watchlist
         watchlist_items = WatchlistItem.query.all()
         symbols = [item.symbol for item in watchlist_items]
+        exchanges = [item.exchange for item in watchlist_items]
     
     if not symbols:
         return jsonify([])
     
-    try:
-        quotes = fetch_realtime_quotes(symbols)
-        return jsonify(quotes)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+    # Process symbols individually to handle errors more gracefully
+    for i, (symbol, exchange) in enumerate(zip(symbols, exchanges)):
+        try:
+            if not OPENALGO_AVAILABLE:
+                return jsonify({'error': 'OpenAlgo API is not available. Please check installation.'}), 503
+            
+            # Get single quote
+            logging.info(f"Fetching quote for {symbol} from exchange {exchange}")
+            quote = fetch_realtime_quotes([symbol], [exchange])[0]
+            results.append(quote)
+            
+        except ValueError as e:
+            # Log the error but continue with other symbols
+            logging.warning(f"Error fetching {symbol} from {exchange}: {str(e)}")
+            # Add error information to the results
+            results.append({
+                'symbol': symbol,
+                'exchange': exchange,
+                'error': str(e),
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+        except Exception as e:
+            logging.warning(f"Unexpected error for {symbol}: {str(e)}")
+            results.append({
+                'symbol': symbol,
+                'exchange': exchange,
+                'error': f"Unexpected error: {str(e)}",
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+    
+    return jsonify(results)

@@ -11,94 +11,115 @@ from flask import current_app
 # Import OpenAlgo API client
 import logging
 import random  # Import random unconditionally for fallback
+import sys
+
+# Log Python path for debugging
+logging.info(f"Python path: {sys.path}")
 
 try:
-    from openalgo import api as openalgo_api
+    # Import OpenAlgo directly as specified by the user
+    from openalgo import api
     OPENALGO_AVAILABLE = True
-except ImportError:
+    logging.info('OpenAlgo API successfully imported')
+except ImportError as e:
     OPENALGO_AVAILABLE = False
+    logging.error(f'OpenAlgo API import error: {str(e)}')
     logging.warning('OpenAlgo API not available. Using mock data for demonstration.')
+except Exception as e:
+    OPENALGO_AVAILABLE = False
+    logging.error(f'Unexpected error during OpenAlgo import: {str(e)}')
+    logging.warning('OpenAlgo API not available due to unexpected error. Using mock data for demonstration.')
 
 # Placeholder for OpenAlgo API integration
 # In a real app, we would use the actual OpenAlgo Python client
 # For now, we'll simulate data fetching
 
-def fetch_historical_data(symbol, start_date, end_date, interval='1d'):
+def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange='NSE'):
     """
     Fetch historical stock data from OpenAlgo API
     
     Uses the OpenAlgo API client to fetch real historical data.
-    Falls back to generated mock data if API is unavailable.
+    No longer falls back to generated mock data if API is unavailable.
     
     Args:
         symbol: Stock symbol to fetch
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
         interval: Data interval (1m, 5m, 15m, 1h, 1d, etc.)
+        exchange: Exchange to fetch data from (default: NSE)
         
     Returns:
         List of OHLCV data points
+        
+    Raises:
+        ValueError: If API is not available or returns an error
     """
     api_key = os.getenv('OPENALGO_API_KEY')
+    host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
     
-    if OPENALGO_AVAILABLE and api_key:
-        try:
-            # Initialize OpenAlgo client
-            client = openalgo_api.API(api_key)
-            
-            # Convert interval format if needed
-            openalgo_interval = convert_interval_format(interval)
-            
-            # Fetch historical data from OpenAlgo API
-            response = client.history(
-                symbol=symbol,
-                exchange='NSE',  # Could be configurable
-                interval=openalgo_interval,
-                from_date=start_date,
-                to_date=end_date
-            )
-            
-            if response['status'] == 'success' and 'data' in response:
-                # Process and format the response data
-                data = []
-                for item in response['data']:
-                    # Format may vary based on actual API response structure
-                    date_obj = datetime.strptime(item.get('time').split('T')[0], '%Y-%m-%d').date()
-                    time_obj = None
-                    if 'T' in item.get('time'):
-                        time_str = item.get('time').split('T')[1].split('+')[0]
-                        time_obj = datetime.strptime(time_str, '%H:%M:%S').time()
-                    
-                    data.append({
-                        'date': date_obj,
-                        'time': time_obj,
-                        'open': float(item.get('open', 0)),
-                        'high': float(item.get('high', 0)),
-                        'low': float(item.get('low', 0)),
-                        'close': float(item.get('close', 0)),
-                        'volume': int(item.get('volume', 0))
-                    })
-                
-                return data
-                
-        except Exception as e:
-            try:
-                from flask import has_app_context, current_app
-                if has_app_context():
-                    current_app.logger.error(f"Error fetching historical data from OpenAlgo: {str(e)}")
-                    current_app.logger.info("Falling back to generated mock data")
-                else:
-                    import logging
-                    logging.error(f"Error fetching historical data from OpenAlgo: {str(e)}")
-                    logging.info("Falling back to generated mock data")
-            except Exception:
-                import logging
-                logging.error(f"Error fetching historical data from OpenAlgo: {str(e)}")
-                logging.info("Falling back to generated mock data")
-            # Fall back to generated data
-            pass
+    if not OPENALGO_AVAILABLE:
+        logging.error(f"Cannot fetch data for {symbol}: OpenAlgo API module is not available")
+        raise ValueError(f"OpenAlgo API is not available. Please check your installation.")
+        
+    if not api_key:
+        logging.error(f"Cannot fetch data for {symbol}: API key is missing")
+        raise ValueError(f"OpenAlgo API key is missing. Please check your .env file.")
     
-    # If OpenAlgo is not available or any error occurred, use generated mock data
+    try:
+        # Initialize OpenAlgo client with host parameter
+        logging.info(f"Initializing OpenAlgo client with host: {host}")
+        client = api(api_key=api_key, host=host)
+        
+        # Convert interval format if needed
+        openalgo_interval = convert_interval_format(interval)
+        
+        # Fetch historical data from OpenAlgo API
+        logging.info(f"Fetching historical data for {symbol} from exchange {exchange}, period {start_date} to {end_date}")
+        response = client.history(
+            symbol=symbol,
+            exchange=exchange,
+            interval=openalgo_interval,
+            from_date=start_date,
+            to_date=end_date
+        )
+        
+        logging.info(f"API response status: {response.get('status', 'unknown')}")
+        
+        if response.get('status') == 'success' and 'data' in response:
+            # Process and format the response data
+            data = []
+            for item in response['data']:
+                # Format may vary based on actual API response structure
+                date_obj = datetime.strptime(item.get('time').split('T')[0], '%Y-%m-%d').date()
+                time_obj = None
+                if 'T' in item.get('time'):
+                    time_str = item.get('time').split('T')[1].split('+')[0]
+                    time_obj = datetime.strptime(time_str, '%H:%M:%S').time()
+                
+                data.append({
+                    'date': date_obj,
+                    'time': time_obj,
+                    'open': float(item.get('open', 0)),
+                    'high': float(item.get('high', 0)),
+                    'low': float(item.get('low', 0)),
+                    'close': float(item.get('close', 0)),
+                    'volume': int(item.get('volume', 0))
+                })
+            
+            return data
+        else:
+            error_msg = response.get('message', 'Unknown API error')
+            logging.error(f"API error for {symbol}: {error_msg}")
+            raise ValueError(f"API error: {error_msg}")
+            
+    except Exception as e:
+        logging.error(f"Error fetching historical data from OpenAlgo: {str(e)}")
+        raise ValueError(f"Failed to fetch data for {symbol} from OpenAlgo API: {str(e)}")
+
+def generate_mock_data(symbol, start_date, end_date, interval='1d'):
+    """Generate mock OHLCV data for testing purposes"""
+    logging.warning(f"Generating mock data for {symbol} from {start_date} to {end_date}")
+    
     try:
         # Convert string dates to datetime objects
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
@@ -231,86 +252,88 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d'):
             logging.error(f"Error fetching historical data for {symbol}: {str(e)}")
         raise
 
-def fetch_realtime_quotes(symbols):
+def fetch_realtime_quotes(symbols, exchanges=None):
     """
     Fetch real-time quotes for a list of symbols from OpenAlgo API
     
     Args:
         symbols: List of stock symbols to fetch quotes for
+        exchanges: List of exchanges corresponding to each symbol. If not provided,
+                 defaults to 'NSE' for all symbols
         
     Returns:
         List of quote data for each symbol
     """
-    try:
-        quotes = []
-        api_key = os.getenv('OPENALGO_API_KEY')
-        host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
-        
-        if OPENALGO_AVAILABLE and api_key:
-            # Initialize OpenAlgo client with api_key and host
-            client = openalgo_api.API(api_key, host=host)
-            
-            for symbol in symbols:
-                try:
-                    # Default to NSE exchange, but could be configurable
-                    response = client.quotes(symbol=symbol, exchange='NSE')
-                    
-                    if response['status'] == 'success':
-                        quote_data = response['data']
-                        
-                        # Calculate change percentage
-                        prev_close = quote_data.get('prev_close', 0)
-                        ltp = quote_data.get('ltp', 0)
-                        
-                        if prev_close > 0:
-                            change_percent = ((ltp - prev_close) / prev_close) * 100
-                        else:
-                            change_percent = 0
-                        
-                        quotes.append({
-                            'symbol': symbol,
-                            'price': quote_data.get('ltp', 0),
-                            'change': round(change_percent, 2),
-                            'open': quote_data.get('open', 0),
-                            'high': quote_data.get('high', 0),
-                            'low': quote_data.get('low', 0),
-                            'volume': quote_data.get('volume', 0),
-                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        })
-                    else:
-                        # If API returns error, use fallback
-                        quotes.append(get_fallback_quote(symbol))
-                except Exception as e:
-                    try:
-                        from flask import has_app_context, current_app
-                        if has_app_context():
-                            current_app.logger.error(f"Error fetching quote for {symbol}: {str(e)}")
-                        else:
-                            import logging
-                            logging.error(f"Error fetching quote for {symbol}: {str(e)}")
-                    except Exception:
-                        import logging
-                        logging.error(f"Error fetching quote for {symbol}: {str(e)}")
-                    quotes.append(get_fallback_quote(symbol))
-        else:
-            # Use mock data if OpenAlgo is not available
-            for symbol in symbols:
-                quotes.append(get_fallback_quote(symbol))
-        
-        return quotes
+    quotes = []
+    api_key = os.getenv('OPENALGO_API_KEY')
+    host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
     
-    except Exception as e:
+    # Default to NSE if exchanges is not provided
+    if exchanges is None:
+        exchanges = ['NSE'] * len(symbols)
+    
+    if not OPENALGO_AVAILABLE:
+        logging.error("Cannot fetch quotes: OpenAlgo API module is not available")
+        raise ValueError("OpenAlgo API is not available. Please check your installation.")
+        
+    if not api_key:
+        logging.error("Cannot fetch quotes: API key is missing")
+        raise ValueError("OpenAlgo API key is missing. Please check your .env file.")
+    
+    # Initialize OpenAlgo client with api_key and host
+    logging.info(f"Initializing OpenAlgo client with host: {host}")
+    client = api(api_key=api_key, host=host)
+    
+    for i, symbol in enumerate(symbols):
         try:
-            from flask import has_app_context, current_app
-            if has_app_context():
-                current_app.logger.error(f"Error fetching quotes: {str(e)}")
+            # Use the corresponding exchange for this symbol
+            exchange = exchanges[i] if i < len(exchanges) else 'NSE'
+            logging.info(f"Fetching quote for {symbol} from exchange {exchange}")
+            response = client.quotes(symbol=symbol, exchange=exchange)
+            
+            if response.get('status') == 'success' and 'data' in response:
+                quote_data = response['data']
+                
+                # Calculate change percentage
+                prev_close = quote_data.get('prev_close', 0)
+                ltp = quote_data.get('ltp', 0)
+                
+                if prev_close > 0:
+                    change_percent = ((ltp - prev_close) / prev_close) * 100
+                else:
+                    change_percent = 0
+                
+                quotes.append({
+                    'symbol': symbol,
+                    'exchange': exchange,
+                    'price': quote_data.get('ltp', 0),
+                    'change': round(change_percent, 2),
+                    'open': quote_data.get('open', 0),
+                    'high': quote_data.get('high', 0),
+                    'low': quote_data.get('low', 0),
+                    'volume': quote_data.get('volume', 0),
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
             else:
-                import logging
-                logging.error(f"Error fetching quotes: {str(e)}")
-        except Exception:
-            import logging
-            logging.error(f"Error fetching quotes: {str(e)}")
-        raise
+                # If API returns error, log it but don't fail the entire request
+                error_msg = response.get('message', 'Unknown API error')
+                logging.error(f"API error for {symbol} from {exchange}: {error_msg}")
+                quotes.append({
+                    'symbol': symbol,
+                    'exchange': exchange,
+                    'error': f"API error: {error_msg}",
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
+        except Exception as e:
+            logging.error(f"Error fetching quote for {symbol} from {exchange}: {str(e)}")
+            quotes.append({
+                'symbol': symbol,
+                'exchange': exchange, 
+                'error': f"Error: {str(e)}",
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+    
+    return quotes
 
 def get_fallback_quote(symbol):
     """Generate fallback quote data when API is not available"""
@@ -363,7 +386,8 @@ def get_supported_intervals():
         try:
             # Initialize OpenAlgo client
             api_key = os.getenv('OPENALGO_API_KEY')
-            client = openalgo_api.API(api_key)
+            host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
+            client = api(api_key=api_key, host=host)
             
             # Fetch supported intervals from the API
             response = client.intervals()

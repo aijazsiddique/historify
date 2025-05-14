@@ -48,4 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('historify-theme', theme);
+  
+  // Dispatch a custom event for other components to react to theme changes
+  const themeChangeEvent = new CustomEvent('themeChange', { detail: { theme } });
+  document.dispatchEvent(themeChangeEvent);
+  
+  // Log theme change
+  console.log(`Theme changed to ${theme}`);
 }

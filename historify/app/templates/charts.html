@@ -8,29 +8,89 @@
   .chart-container {
     height: 500px;
     position: relative;
+    transition: height 0.5s ease;
   }
+  
+  .indicator-container {
+    height: 200px;
+    position: relative;
+    margin-top: 8px;
+  }
+  
   .tv-lightweight-charts {
     width: 100%;
     height: 100%;
   }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .indicator-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .indicator-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .indicator-badge .close-btn {
+    margin-left: 0.5rem;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  
+  .indicator-badge .close-btn:hover {
+    opacity: 1;
+  }
 </style>
 {% endblock %}
 
+{% block extra_js %}
+<!-- TradingView Lightweight Charts Library (specific version) -->
+<script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+<!-- Custom TradingView Charts Implementation -->
+<script src="{{ url_for('static', filename='js/tradingview-charts.js') }}"></script>
+{% endblock %}
+
 {% block content %}
-<div class="card bg-base-100 shadow-xl mb-6">
+<div class="card bg-base-100 shadow-xl mb-6 animate-fade-in">
   <div class="card-body">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-      <h2 class="card-title text-2xl">Charts</h2>
+      <h2 class="card-title text-2xl">TradingView Charts</h2>
       
       <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
-        <!-- Symbol Selector -->
+        <!-- Symbol & Exchange Selector -->
         <div class="form-control">
-          <select id="symbol-selector" class="select select-bordered">
-            <option value="" disabled {% if not symbol %}selected{% endif %}>Select Symbol</option>
-            {% for item in watchlist_items %}
-              <option value="{{ item.symbol }}" {% if symbol == item.symbol %}selected{% endif %}>{{ item.symbol }} - {{ item.name }}</option>
-            {% endfor %}
-          </select>
+          <div class="join">
+            <select id="symbol-selector" class="select select-bordered join-item">
+              <option value="" disabled {% if not symbol %}selected{% endif %}>Select Symbol</option>
+              {% for item in watchlist_items %}
+                <option value="{{ item.symbol }}" data-exchange="{{ item.exchange }}" {% if symbol == item.symbol %}selected{% endif %}>{{ item.symbol }} - {{ item.name }}</option>
+              {% endfor %}
+            </select>
+            <select id="exchange-selector" class="select select-bordered join-item">
+              <option value="NSE">NSE</option>
+              <option value="NFO">NFO</option>
+              <option value="BSE">BSE</option>
+              <option value="BFO">BFO</option>
+              <option value="MCX">MCX</option>
+            </select>
+          </div>
         </div>
         
         <!-- Timeframe Selector -->
@@ -41,97 +101,59 @@
             <option value="15m" {% if timeframe == '15m' %}selected{% endif %}>15 Minutes</option>
             <option value="30m" {% if timeframe == '30m' %}selected{% endif %}>30 Minutes</option>
             <option value="1h" {% if timeframe == '1h' %}selected{% endif %}>1 Hour</option>
-            <option value="1d" {% if timeframe == '1d' or not timeframe %}selected{% endif %}>Daily</option>
-            <option value="1w" {% if timeframe == '1w' %}selected{% endif %}>Weekly</option>
+            <option value="D" {% if timeframe == 'D' or not timeframe %}selected{% endif %}>Daily</option>
+            <option value="W" {% if timeframe == 'W' %}selected{% endif %}>Weekly</option>
           </select>
+        </div>
+        
+        <!-- Indicator Controls -->
+        <div class="form-control">
+          <div class="join">
+            <input type="number" id="ema-period" class="input input-bordered join-item w-20" value="20" min="1" max="200" placeholder="EMA Period">
+            <input type="number" id="rsi-period" class="input input-bordered join-item w-20" value="14" min="1" max="100" placeholder="RSI Period">
+            <button id="fetch-data-btn" class="btn btn-primary join-item">Apply</button>
+          </div>
         </div>
         
         <!-- Auto-update Toggle -->
         <div class="form-control">
           <label class="label cursor-pointer">
             <span class="label-text mr-2">Auto-update</span>
-            <input type="checkbox" class="toggle toggle-primary" id="auto-update-toggle" checked />
+            <input type="checkbox" class="toggle toggle-primary" id="auto-update-toggle" />
           </label>
         </div>
       </div>
     </div>
     
-    <!-- Chart Controls -->
-    <div class="tabs tabs-boxed mb-4">
-      <a class="tab tab-active" data-chart-type="candles">Candles</a>
-      <a class="tab" data-chart-type="line">Line</a>
-      <a class="tab" data-chart-type="area">Area</a>
-    </div>
-    
+    <!-- Main Chart Container -->
     <div id="chart-container" class="chart-container">
-      <!-- Chart will be rendered here -->
-      <div class="flex items-center justify-center h-full" id="chart-placeholder">
-        <div class="text-center">
-          <span class="loading loading-spinner loading-lg"></span>
-          <p class="mt-4">Select a symbol to display chart</p>
-        </div>
-      </div>
-      <div id="tv-chart-container" class="tv-lightweight-charts" style="display:none;"></div>
+      <div id="chart" class="tv-lightweight-charts" style="width: 100%; height: 100%;"></div>
     </div>
-  </div>
-</div>
-
-<!-- Chart Indicators Card -->
-<div class="card bg-base-100 shadow-xl mb-6">
-  <div class="card-body">
-    <h2 class="card-title">Indicators</h2>
     
-    <div class="flex flex-wrap gap-4 mt-2">
-      <!-- Moving Average -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Moving Average</span>
-        </label>
-        <div class="flex gap-2">
-          <select id="ma-type" class="select select-sm select-bordered">
-            <option value="ema">EMA</option>
-            <option value="sma">SMA</option>
-          </select>
-          <input type="number" id="ma-period" class="input input-sm input-bordered w-20" value="20" min="1" max="200">
-          <button id="add-ma-btn" class="btn btn-sm btn-primary">Add</button>
-        </div>
-      </div>
-      
-      <!-- RSI -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">RSI</span>
-        </label>
-        <div class="flex gap-2">
-          <input type="number" id="rsi-period" class="input input-sm input-bordered w-20" value="14" min="1" max="200">
-          <button id="add-rsi-btn" class="btn btn-sm btn-primary">Add</button>
-        </div>
-      </div>
-      
-      <!-- MACD -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">MACD</span>
-        </label>
-        <div class="flex gap-2">
-          <button id="add-macd-btn" class="btn btn-sm btn-primary">Add</button>
-        </div>
-      </div>
+    <!-- RSI Indicator Container -->
+    <div id="rsi-container" class="indicator-container">
+      <div id="rsiChart" class="tv-lightweight-charts" style="width: 100%; height: 100%;"></div>
     </div>
     
     <!-- Active Indicators -->
     <div class="mt-4">
-      <h3 class="font-medium">Active Indicators</h3>
-      <div id="active-indicators" class="flex flex-wrap gap-2 mt-2">
-        <!-- Will be populated by JavaScript -->
-        <span class="badge badge-outline">No active indicators</span>
+      <h3 class="font-semibold mb-2">Active Indicators</h3>
+      <div id="active-indicators" class="flex flex-wrap">
+        <div class="indicator-badge bg-blue-100 text-blue-800" id="ema-indicator">
+          <span>EMA <span id="ema-period-label">20</span></span>
+          <span class="close-btn" data-indicator="ema">×</span>
+        </div>
+        <div class="indicator-badge bg-red-100 text-red-800" id="rsi-indicator">
+          <span>RSI <span id="rsi-period-label">14</span></span>
+          <span class="close-btn" data-indicator="rsi">×</span>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Data Summary Card -->
-<div class="card bg-base-100 shadow-xl mb-6">
+<div class="card bg-base-100 shadow-xl mb-6 animate-fade-in">
   <div class="card-body">
     <h2 class="card-title">Data Summary</h2>
     
@@ -140,27 +162,24 @@
         <thead>
           <tr>
             <th>Symbol</th>
-            <th>Date Range</th>
-            <th>Records</th>
-            <th>Last Update</th>
+            <th>Exchange</th>
+            <th>Interval</th>
+            <th>Open</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Close</th>
+            <th>Change</th>
+            <th>Volume</th>
           </tr>
         </thead>
-        <tbody id="data-summary-table">
+        <tbody id="data-summary">
           <!-- Will be populated by JavaScript -->
           <tr>
-            <td colspan="4" class="text-center">
-              <span>No data available</span>
-            </td>
+            <td colspan="9" class="text-center">No data available</td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<!-- TradingView Lightweight Charts -->
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}

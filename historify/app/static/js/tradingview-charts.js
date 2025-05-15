@@ -121,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create RSI chart
             rsiChart = LightweightCharts.createChart(rsiContainer, rsiChartOptions);
             
-            // Add candlestick series - using the correct API for version 3.8.0
-            candleSeries = mainChart.addCandlestickSeries({
+            // Add candlestick series - using the new API for version 5.0.0
+            candleSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries, {
                 upColor: '#26a69a',
                 downColor: '#ef5350',
                 borderVisible: false,
@@ -130,15 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 wickDownColor: '#ef5350',
             });
             
-            // Add EMA series
-            emaSeries = mainChart.addLineSeries({
+            // Add EMA series with the new API
+            emaSeries = mainChart.addSeries(LightweightCharts.LineSeries, {
                 color: '#2962FF',
                 lineWidth: 2,
                 priceLineVisible: false,
             });
             
-            // Add RSI series
-            rsiSeries = rsiChart.addLineSeries({
+            // Add RSI series with the new API
+            rsiSeries = rsiChart.addSeries(LightweightCharts.LineSeries, {
                 color: '#f44336',
                 lineWidth: 2,
                 priceLineVisible: false,
@@ -151,30 +151,34 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('error', 'Failed to initialize charts: ' + error.message);
         }
         
-        // Add reference lines for RSI
-        const rsiOverSold = rsiChart.addLineSeries({
+        // Add reference lines for RSI with the new API
+        const rsiOverSold = rsiChart.addSeries(LightweightCharts.LineSeries, {
             color: 'rgba(41, 98, 255, 0.3)',
             lineWidth: 1,
             lineStyle: LightweightCharts.LineStyle.Dashed,
             priceLineVisible: false,
         });
         
-        const rsiOverBought = rsiChart.addLineSeries({
+        const rsiOverBought = rsiChart.addSeries(LightweightCharts.LineSeries, {
             color: 'rgba(41, 98, 255, 0.3)',
             lineWidth: 1,
             lineStyle: LightweightCharts.LineStyle.Dashed,
             priceLineVisible: false,
         });
         
-        // Add reference lines at 30 and 70
+        // Add reference lines at 30 and 70 using Unix timestamps
+        // Convert to Unix timestamps (seconds since epoch)
+        const startTime = Math.floor(new Date(2000, 0, 1).getTime() / 1000);
+        const endTime = Math.floor(new Date(2050, 0, 1).getTime() / 1000);
+        
         rsiOverSold.setData([
-            { time: { year: 2000, month: 1, day: 1 }, value: 30 },
-            { time: { year: 2050, month: 1, day: 1 }, value: 30 },
+            { time: startTime, value: 30 },
+            { time: endTime, value: 30 },
         ]);
         
         rsiOverBought.setData([
-            { time: { year: 2000, month: 1, day: 1 }, value: 70 },
-            { time: { year: 2050, month: 1, day: 1 }, value: 70 },
+            { time: startTime, value: 70 },
+            { time: endTime, value: 70 },
         ]);
         
         // Simple crosshair synchronization - just pass the time value
@@ -313,8 +317,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Format candlestick data for TradingView
     function formatCandlestickData(data) {
-        // The data is already in the correct format with time objects
-        // Just return it directly
+        // For TradingView 5.0.0, we need to ensure the data uses Unix timestamps
+        // The backend should already be providing Unix timestamps, so we just verify the format
+        if (data && data.length > 0) {
+            // Check if we need to convert from time objects to timestamps
+            if (typeof data[0].time === 'object' && data[0].time !== null) {
+                console.log('Converting time objects to Unix timestamps');
+                return data.map(item => ({
+                    time: typeof item.time === 'number' ? item.time : 
+                          Math.floor(new Date(item.time.year, item.time.month - 1, item.time.day, 
+                                            item.time.hour || 0, item.time.minute || 0).getTime() / 1000),
+                    open: item.open,
+                    high: item.high,
+                    low: item.low,
+                    close: item.close,
+                    volume: item.volume
+                }));
+            }
+        }
         return data;
     }
     
@@ -322,8 +342,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatIndicatorData(data) {
         if (!data) return [];
         
-        // The indicator data is already in the correct format with time objects
-        // Just return it directly
+        // For TradingView 5.0.0, we need to ensure the data uses Unix timestamps
+        if (data && data.length > 0) {
+            // Check if we need to convert from time objects to timestamps
+            if (typeof data[0].time === 'object' && data[0].time !== null) {
+                console.log('Converting indicator time objects to Unix timestamps');
+                return data.map(item => ({
+                    time: typeof item.time === 'number' ? item.time : 
+                          Math.floor(new Date(item.time.year, item.time.month - 1, item.time.day, 
+                                            item.time.hour || 0, item.time.minute || 0).getTime() / 1000),
+                    value: item.value
+                }));
+            }
+        }
         return data;
     }
     
@@ -331,11 +362,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatHistogramData(histogramData, macdData) {
         if (!histogramData || !macdData) return [];
         
+        // For TradingView 5.0.0, we need to ensure the data uses Unix timestamps
         // Add colors to the histogram data based on value
         return histogramData.map((item) => {
             const color = item.value >= 0 ? '#26a69a' : '#ef5350';
+            
+            // Convert time object to Unix timestamp if needed
+            const time = typeof item.time === 'number' ? item.time : 
+                        (typeof item.time === 'object' && item.time !== null) ? 
+                        Math.floor(new Date(item.time.year, item.time.month - 1, item.time.day, 
+                                          item.time.hour || 0, item.time.minute || 0).getTime() / 1000) : 
+                        item.time;
+            
             return {
-                ...item,  // Keep the original time object and value
+                time,
+                value: item.value,
                 color     // Add color property
             };
         });

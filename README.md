@@ -104,7 +104,7 @@ historify/
 ## Technology Stack
 
 - **Backend**: Flask, SQLAlchemy, SQLite
-- **Frontend**: Tailwind CSS, DaisyUI, TradingView Lightweight Charts 3.8.0
+- **Frontend**: Tailwind CSS, DaisyUI, TradingView Lightweight Charts 5.0.0
 - **Data Handling**: Python data processing utilities, Pandas for technical indicators
 - **API Integration**: OpenAlgo API for historical data and quotes
 

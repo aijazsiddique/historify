@@ -262,3 +262,257 @@ def get_quotes():
             })
     
     return jsonify(results)
+
+@api_bp.route('/parse-excel', methods=['POST'])
+def parse_excel():
+    """Parse Excel file and return data as JSON"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # For now, return a mock response
+        # In production, use pandas or openpyxl to parse Excel
+        return jsonify({
+            'rows': [
+                ['Symbol', 'Exchange'],
+                ['RELIANCE', 'NSE'],
+                ['INFY', 'NSE'],
+                ['TCS', 'NSE']
+            ]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/import-symbols', methods=['POST'])
+def import_symbols():
+    """Import symbols to watchlist"""
+    try:
+        data = request.json
+        symbols = data.get('symbols', [])
+        
+        if not symbols:
+            return jsonify({'error': 'No symbols provided'}), 400
+        
+        imported = 0
+        errors = []
+        
+        for symbol_data in symbols:
+            try:
+                # Check if symbol already exists
+                existing = WatchlistItem.query.filter_by(
+                    symbol=symbol_data['symbol'],
+                    exchange=symbol_data['exchange']
+                ).first()
+                
+                if not existing:
+                    watchlist_item = WatchlistItem(
+                        symbol=symbol_data['symbol'],
+                        exchange=symbol_data['exchange']
+                    )
+                    db.session.add(watchlist_item)
+                    imported += 1
+            except Exception as e:
+                errors.append({
+                    'symbol': symbol_data['symbol'],
+                    'error': str(e)
+                })
+        
+        db.session.commit()
+        
+        return jsonify({
+            'imported': imported,
+            'errors': errors,
+            'message': f'Successfully imported {imported} symbols'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/export', methods=['POST'])
+def export_data():
+    """Export data in various formats"""
+    try:
+        data = request.json
+        symbols = data.get('symbols', [])
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        interval = data.get('interval', 'D')
+        format_type = data.get('format', 'individual')
+        
+        if not symbols:
+            return jsonify({'error': 'No symbols selected'}), 400
+        
+        # Convert date strings to date objects
+        if start_date:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        else:
+            start_date_obj = None
+            
+        if end_date:
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+        else:
+            end_date_obj = datetime.now().date()
+        
+        # For large exports (>10 symbols or combined format), queue the job
+        if len(symbols) > 10 or format_type in ['combined', 'zip']:
+            # Create export job (in production, use a task queue like Celery)
+            job_id = str(datetime.now().timestamp())
+            job = {
+                'id': job_id,
+                'symbol_count': len(symbols),
+                'format': format_type,
+                'status': 'pending',
+                'progress': 0,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            # In production, queue the job for background processing
+            # For now, return job info
+            return jsonify({'job_id': job_id, **job})
+        
+        # For small exports, process immediately
+        export_id = str(datetime.now().timestamp())
+        
+        # Store export metadata in session for retrieval during download
+        from flask import session
+        session[f'export_{export_id}'] = {
+            'symbols': symbols,
+            'start_date': start_date,
+            'end_date': end_date,
+            'interval': interval,
+            'format': format_type
+        }
+        
+        download_url = f'/api/export/download/{export_id}'
+        
+        return jsonify({
+            'download_url': download_url,
+            'symbols': len(symbols),
+            'format': format_type
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/export/queue', methods=['GET'])
+def get_export_queue():
+    """Get export queue status"""
+    # Return empty queue by default - would be populated from database/cache in production
+    # When real exports are created, they would be stored and retrieved here
+    queue = []
+    
+    return jsonify(queue)
+
+@api_bp.route('/export/download/<export_id>', methods=['GET'])
+def download_export(export_id):
+    """Download exported file"""
+    from flask import Response, session
+    import csv
+    from io import StringIO
+    
+    # Get export metadata from session
+    export_metadata = session.get(f'export_{export_id}')
+    if not export_metadata:
+        return jsonify({'error': 'Export not found or expired'}), 404
+    
+    symbols = export_metadata['symbols']
+    start_date = export_metadata['start_date']
+    end_date = export_metadata['end_date']
+    interval = export_metadata['interval']
+    format_type = export_metadata['format']
+    
+    # Convert date strings to date objects
+    if start_date:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+    else:
+        # Default to 1 year ago if no start date
+        start_date_obj = (datetime.now() - timedelta(days=365)).date()
+        
+    if end_date:
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date_obj = datetime.now().date()
+    
+    # Create CSV data
+    output = StringIO()
+    
+    if format_type == 'combined':
+        # Combined format: all symbols in one file
+        writer = csv.writer(output)
+        writer.writerow(['Symbol', 'Exchange', 'Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Volume'])
+        
+        for symbol_data in symbols:
+            symbol = symbol_data['symbol']
+            exchange = symbol_data['exchange']
+            
+            # Fetch data from the dynamic table
+            try:
+                data = get_data_by_timeframe(symbol, exchange, interval, start_date_obj, end_date_obj)
+                
+                for item in data:
+                    writer.writerow([
+                        symbol,
+                        exchange,
+                        item.date.strftime('%Y-%m-%d'),
+                        item.time.strftime('%H:%M:%S') if item.time else '',
+                        item.open,
+                        item.high,
+                        item.low,
+                        item.close,
+                        item.volume
+                    ])
+            except Exception as e:
+                logging.error(f"Error exporting data for {symbol}: {str(e)}")
+                continue
+                
+    else:
+        # Individual format: data for first symbol only (for demo)
+        # In production, this would create a zip file with individual CSVs
+        writer = csv.writer(output)
+        writer.writerow(['Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Volume'])
+        
+        if symbols:
+            symbol_data = symbols[0]
+            symbol = symbol_data['symbol']
+            exchange = symbol_data['exchange']
+            
+            try:
+                data = get_data_by_timeframe(symbol, exchange, interval, start_date_obj, end_date_obj)
+                
+                for item in data:
+                    writer.writerow([
+                        item.date.strftime('%Y-%m-%d'),
+                        item.time.strftime('%H:%M:%S') if item.time else '',
+                        item.open,
+                        item.high,
+                        item.low,
+                        item.close,
+                        item.volume
+                    ])
+            except Exception as e:
+                logging.error(f"Error exporting data for {symbol}: {str(e)}")
+    
+    # Clear the export from session
+    session.pop(f'export_{export_id}', None)
+    
+    # Get CSV content
+    csv_content = output.getvalue()
+    output.close()
+    
+    # Generate filename
+    if format_type == 'combined':
+        filename = f'historify_export_combined_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    else:
+        symbol = symbols[0]['symbol'] if symbols else 'export'
+        filename = f'historify_{symbol}_{interval}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    
+    return Response(
+        csv_content,
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )

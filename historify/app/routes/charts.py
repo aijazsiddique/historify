@@ -5,7 +5,7 @@ Charts Routes Blueprint
 from flask import Blueprint, render_template, request, jsonify, current_app
 from app.models.stock_data import StockData
 from app.models.watchlist import WatchlistItem
-from app.models.dynamic_tables import get_data_by_timeframe, ensure_table_exists
+from app.models.dynamic_tables import get_data_by_timeframe, ensure_table_exists, get_available_tables
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
@@ -109,11 +109,28 @@ def get_timeframes():
     ]
     return jsonify(timeframes)
 
+@charts_bp.route('/debug/tables')
+def debug_tables():
+    """Debug endpoint to check available tables"""
+    try:
+        tables = get_available_tables()
+        return jsonify({
+            'tables': tables,
+            'count': len(tables)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @charts_bp.route('/api/chart-data/<symbol>/<exchange>/<interval>/<int:ema_period>/<int:rsi_period>')
 def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
     """Get chart data with indicators for TradingView chart"""
     try:
-        logging.info(f"Fetching chart data for {symbol} ({exchange}) with interval {interval}, EMA period {ema_period}, RSI period {rsi_period}")
+        logging.info(f"Fetching chart data for {symbol} ({exchange}) with interval '{interval}', EMA period {ema_period}, RSI period {rsi_period}")
+        
+        # Debug: Check available tables first
+        available_tables = get_available_tables()
+        matching_tables = [t for t in available_tables if t['symbol'] == symbol.upper() and t['exchange'] == exchange.upper()]
+        logging.info(f"Available tables for {symbol} ({exchange}): {matching_tables}")
         
         # Get start and end dates based on interval
         end_date = datetime.now().date()
@@ -130,8 +147,20 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
         
         logging.info(f"Date range: {start_date} to {end_date}")
         
-        # Fetch data from dynamic table
+        # Fetch data from dynamic table - try multiple interval formats
         data = get_data_by_timeframe(symbol, exchange, interval, start_date, end_date)
+        
+        # If no data found and interval is daily, try alternative formats
+        if not data and interval in ['1d', 'D']:
+            alternative_interval = 'D' if interval == '1d' else '1d'
+            logging.info(f"No data found with {interval}, trying {alternative_interval}")
+            data = get_data_by_timeframe(symbol, exchange, alternative_interval, start_date, end_date)
+            
+        # Same for weekly
+        if not data and interval in ['1w', 'W']:
+            alternative_interval = 'W' if interval == '1w' else '1w'
+            logging.info(f"No data found with {interval}, trying {alternative_interval}")
+            data = get_data_by_timeframe(symbol, exchange, alternative_interval, start_date, end_date)
         
         if not data:
             logging.warning(f"No data found for {symbol} ({exchange}) with {interval} interval")
@@ -150,21 +179,24 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
         for item in data:
             try:
                 # Create datetime from the database date and time
-                # Handle case where time might be None
+                # Handle case where time might be None (daily data)
                 if item.time is None:
-                    db_datetime = datetime.combine(item.date, datetime.min.time())
+                    # For daily data, use just the date
+                    if interval in ['D', '1d', 'W', '1w']:
+                        # For daily/weekly data, use the date string in YYYY-MM-DD format
+                        time_obj = item.date.strftime('%Y-%m-%d')
+                    else:
+                        # For intraday data without time, use start of day
+                        db_datetime = datetime.combine(item.date, datetime.min.time())
+                        time_obj = int(db_datetime.timestamp())
                 else:
+                    # For intraday data with time
                     db_datetime = datetime.combine(item.date, item.time)
+                    time_obj = int(db_datetime.timestamp())
                 
-                # Convert to Unix timestamp in seconds (what LightweightCharts 3.8.0 expects)
-                timestamp = int(db_datetime.timestamp())
-                
-                # Log some sample timestamps for debugging
-                if item.time and item.time.hour == 9 and item.time.minute == 15:
-                    logging.info(f"9:15 AM candle timestamp: {timestamp}, date: {item.date}, time: {item.time}")
-                
-                # Use the timestamp directly as the time value
-                time_obj = timestamp
+                # Log some sample data for debugging
+                if len(ohlcv_data) < 3:  # Log first few items
+                    logging.info(f"Data point: date={item.date}, time={item.time}, time_obj={time_obj}, interval={interval}")
                 
             except Exception as e:
                 logging.error(f"Error processing datetime: {e}, date: {item.date}, time: {item.time}")

@@ -24,3 +24,19 @@ def dashboard_page():
 def profile_page():
     # existing code for profile page
     pass
+
+@main_bp.route('/import')
+def import_symbols():
+    """Render the import symbols page"""
+    return render_template('import.html')
+
+@main_bp.route('/export')
+def export_data():
+    """Render the export data page"""
+    return render_template('export.html')
+
+@main_bp.route('/download')
+def bulk_download():
+    """Render the bulk download page"""
+    return render_template('download.html')
+

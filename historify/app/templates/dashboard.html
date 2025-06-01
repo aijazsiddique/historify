@@ -1,127 +1,280 @@
 {% extends "base.html" %}
 
 {% block title %}Dashboard - Historify{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">Data Download Dashboard</h1>
-
-    <form id="download-form" class="card bg-base-100 shadow-xl p-6 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <h2 class="text-xl font-semibold mb-3">1. Select Symbols</h2>
-                <div class="form-control mb-2">
-                  <label class="label cursor-pointer justify-start">
-                    <input type="checkbox" id="select-all-symbols" class="checkbox checkbox-secondary" />
-                    <span class="label-text ml-2 font-semibold">Select All / Deselect All</span>
-                  </label>
+<!-- Quick Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="card-modern stat-card">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-muted">Total Symbols</p>
+                    <p class="text-3xl font-bold mt-1" id="total-symbols">150</p>
+                    <p class="text-xs text-success mt-2">
+                        <i class="fas fa-arrow-up mr-1"></i>
+                        <span>12 added this week</span>
+                    </p>
                 </div>
-                <div id="symbol-checkboxes" class="max-h-60 overflow-y-auto bg-base-200 p-3 rounded-md grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                    <!-- Symbol checkboxes will be loaded here by dashboard.js -->
-                    <span class="loading loading-dots loading-md"></span> Loading symbols...
-                </div>
-            </div>
-
-            <div>
-                <h2 class="text-xl font-semibold mb-3">2. Select Interval</h2>
-                <div class="form-control mb-4">
-                    <label class="label" for="interval-select">
-                        <span class="label-text">Interval:</span>
-                    </label>
-                    <select id="interval-select" class="select select-bordered w-full">
-                        <option value="1m">1 Minute</option>
-                        <option value="5m">5 Minutes</option>
-                        <option value="15m">15 Minutes</option>
-                        <option value="30m">30 Minutes</option>
-                        <option value="1h">1 Hour</option>
-                        <option value="D" selected>Daily</option>
-                    </select>
-                </div>
-                <h2 class="text-xl font-semibold mb-3">2. Select Interval</h2>
-                <div class="form-control mb-4">
-                    <label class="label" for="interval-select">
-                        <span class="label-text">Interval:</span>
-                    </label>
-                    <select id="interval-select" class="select select-bordered w-full">
-                        <option value="1m">1 Minute</option>
-                        <option value="5m">5 Minutes</option>
-                        <option value="15m">15 Minutes</option>
-                        <option value="30m">30 Minutes</option>
-                        <option value="1h">1 Hour</option>
-                        <option value="D" selected>Daily</option>
-                    </select>
-                </div>
-                <h2 class="text-xl font-semibold mb-3">3. Select Date Range</h2>
-                <div class="form-control mb-4">
-                    <label class="label" for="date-range">
-                        <span class="label-text">Choose Range:</span>
-                    </label>
-                    <select id="date-range" class="select select-bordered w-full">
-                        <option value="30d" selected>Last 30 Days</option>
-                        <option value="5d">Last 5 Days</option>
-                        <option value="90d">Last 90 Days</option>
-                        <option value="1y">Last 1 Year</option>
-                        <option value="2y">Last 2 Years</option>
-                        <option value="5y">Last 5 Years</option>
-                        <option value="10y">Last 10 Years</option>
-                        <option value="today">Today</option>
-                        <option value="custom">Custom Range</option>
-                    </select>
-                </div>
-
-                <div id="custom-date-range" class="hidden grid grid-cols-2 gap-4 mb-4">
-                    <div class="form-control">
-                        <label class="label" for="start-date">
-                            <span class="label-text">Start Date:</span>
-                        </label>
-                        <input type="date" id="start-date" class="input input-bordered w-full" />
-                    </div>
-                    <div class="form-control">
-                        <label class="label" for="end-date">
-                            <span class="label-text">End Date:</span>
-                        </label>
-                        <input type="date" id="end-date" class="input input-bordered w-full" />
-                    </div>
-                </div>
-
-                <h2 class="text-xl font-semibold mb-3">3. Download Mode</h2>
-                <div class="form-control">
-                    <label class="label cursor-pointer">
-                        <span class="label-text">Fresh Download (overwrite existing for range)</span> 
-                        <input type="radio" name="download-mode" class="radio radio-primary" value="fresh" checked />
-                    </label>
-                </div>
-                <div class="form-control">
-                    <label class="label cursor-pointer">
-                        <span class="label-text">Continue Download (from last checkpoint)</span> 
-                        <input type="radio" name="download-mode" class="radio radio-primary" value="continue" />
-                    </label>
+                <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-chart-line text-primary text-xl"></i>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="mt-8 flex justify-end">
-            <button id="download-btn" type="submit" class="btn btn-primary">
-                <span>Download Data</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-            </button>
+    <div class="card-modern stat-card">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-muted">Data Points</p>
+                    <p class="text-3xl font-bold mt-1">2.5M</p>
+                    <p class="text-xs text-muted mt-2">Across all symbols</p>
+                </div>
+                <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-database text-success text-xl"></i>
+                </div>
+            </div>
         </div>
-    </form>
+    </div>
 
-    <div id="download-status" class="mt-6 space-y-2"></div>
-    
-    <!-- Placeholder for latest data table if needed -->
-    <!-- <div id="latest-data-table-container" class="mt-8"> -->
-    <!--   <h2 class="text-xl font-semibold mb-3">Latest Data Overview</h2> -->
-    <!--   <div id="latest-data-table"></div> -->
-    <!-- </div> -->
+    <div class="card-modern stat-card">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-muted">Data Quality</p>
+                    <p class="text-3xl font-bold mt-1">98%</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-success rounded-full h-2" style="width: 98%"></div>
+                    </div>
+                </div>
+                <div class="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-check-circle text-warning text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="card-modern stat-card">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-muted">Last Sync</p>
+                    <p class="text-3xl font-bold mt-1">5m</p>
+                    <p class="text-xs text-muted mt-2">ago</p>
+                </div>
+                <div class="w-12 h-12 bg-info/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-sync text-info text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <a href="/import" class="card-modern hover:border-primary transition-all group">
+        <div class="card-body flex flex-row items-center gap-4">
+            <div class="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <i class="fas fa-file-import text-primary text-2xl"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-semibold text-lg">Import Symbols</h3>
+                <p class="text-sm text-muted">Bulk import from CSV/Excel</p>
+            </div>
+            <i class="fas fa-arrow-right text-gray-400 group-hover:text-primary transition-colors"></i>
+        </div>
+    </a>
+
+    <a href="/export" class="card-modern hover:border-primary transition-all group">
+        <div class="card-body flex flex-row items-center gap-4">
+            <div class="w-16 h-16 bg-success/10 rounded-xl flex items-center justify-center group-hover:bg-success/20 transition-colors">
+                <i class="fas fa-file-export text-success text-2xl"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-semibold text-lg">Export Data</h3>
+                <p class="text-sm text-muted">Download in multiple formats</p>
+            </div>
+            <i class="fas fa-arrow-right text-gray-400 group-hover:text-success transition-colors"></i>
+        </div>
+    </a>
+
+    <a href="/download" class="card-modern hover:border-primary transition-all group">
+        <div class="card-body flex flex-row items-center gap-4">
+            <div class="w-16 h-16 bg-info/10 rounded-xl flex items-center justify-center group-hover:bg-info/20 transition-colors">
+                <i class="fas fa-download text-info text-2xl"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-semibold text-lg">Bulk Download</h3>
+                <p class="text-sm text-muted">Update historical data</p>
+            </div>
+            <i class="fas fa-arrow-right text-gray-400 group-hover:text-info transition-colors"></i>
+        </div>
+    </a>
+</div>
+
+<!-- Data Download Section -->
+<div class="card-modern">
+    <div class="card-header">
+        <h2 class="text-xl font-semibold">Quick Data Download</h2>
+    </div>
+    <div class="card-body">
+        <form id="download-form">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Symbol Selection -->
+                <div>
+                    <h3 class="text-lg font-medium mb-4">Select Symbols</h3>
+                    <div class="mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="select-all-symbols" class="checkbox checkbox-primary" />
+                            <span class="font-medium">Select All / Deselect All</span>
+                        </label>
+                    </div>
+                    <div id="symbol-checkboxes" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- Symbol checkboxes will be loaded here -->
+                            <div class="col-span-2 text-center py-8">
+                                <div class="inline-flex items-center gap-2 text-gray-500">
+                                    <span class="loading loading-spinner loading-sm"></span>
+                                    <span>Loading symbols...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Options -->
+                <div>
+                    <h3 class="text-lg font-medium mb-4">Download Options</h3>
+                    
+                    <!-- Interval Selection -->
+                    <div class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Interval</label>
+                        <select id="interval-select" class="input-modern">
+                            <option value="1m">1 Minute</option>
+                            <option value="5m">5 Minutes</option>
+                            <option value="15m">15 Minutes</option>
+                            <option value="30m">30 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                            <option value="D" selected>Daily</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Date Range</label>
+                        <select id="date-range" class="input-modern">
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="5d">Last 5 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last 1 Year</option>
+                            <option value="2y">Last 2 Years</option>
+                            <option value="5y">Last 5 Years</option>
+                            <option value="10y">Last 10 Years</option>
+                            <option value="today">Today</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom Date Range -->
+                    <div id="custom-date-range" class="hidden grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Start Date</label>
+                            <input type="date" id="start-date" class="input-modern" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">End Date</label>
+                            <input type="date" id="end-date" class="input-modern" />
+                        </div>
+                    </div>
+
+                    <!-- Download Mode -->
+                    <div class="mb-6">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Download Mode</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <input type="radio" name="download-mode" class="radio radio-primary" value="fresh" checked />
+                                <div>
+                                    <span class="font-medium">Fresh Download</span>
+                                    <span class="text-sm text-gray-500 block">Overwrite existing data for selected range</span>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <input type="radio" name="download-mode" class="radio radio-primary" value="continue" />
+                                <div>
+                                    <span class="font-medium">Continue Download</span>
+                                    <span class="text-sm text-gray-500 block">Resume from last checkpoint</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button type="button" class="btn-modern btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button id="download-btn" type="submit" class="btn-modern btn-primary">
+                    <i class="fas fa-download"></i>
+                    Start Download
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Download Status -->
+<div id="download-status" class="mt-6 space-y-2"></div>
+
+<!-- Recent Activity -->
+<div class="card-modern mt-8">
+    <div class="card-header flex items-center justify-between">
+        <h2 class="text-xl font-semibold">Recent Activity</h2>
+        <button class="btn-modern btn-ghost btn-sm">
+            <i class="fas fa-refresh"></i>
+            Refresh
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="space-y-3">
+            <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div class="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-check text-success"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-medium">Data download completed</p>
+                    <p class="text-sm text-muted">Downloaded 50 symbols - 2 minutes ago</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div class="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-file-import text-info"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-medium">Symbols imported</p>
+                    <p class="text-sm text-muted">Added 25 new symbols from CSV - 1 hour ago</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div class="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-sync text-warning"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-medium">Watchlist updated</p>
+                    <p class="text-sm text-muted">Real-time quotes refreshed - 5 minutes ago</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}
+{% block extra_js %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

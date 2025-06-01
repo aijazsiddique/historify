@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Scheduler Manager - Historify{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scheduler Manager</h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">Automate data downloads at specific times</p>
+            </div>
+            <button onclick="showAddJobModal()" class="btn-modern btn-primary">
+                <i class="fas fa-plus"></i>
+                Add New Job
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <button onclick="addPresetJob('market_close')" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-bell text-primary text-xl"></i>
+                </div>
+                <div class="text-left">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Market Close Download</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Daily at 3:35 PM IST</p>
+                </div>
+            </div>
+        </button>
+        
+        <button onclick="addPresetJob('pre_market')" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-sun text-info text-xl"></i>
+                </div>
+                <div class="text-left">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Pre-Market Download</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Daily at 8:30 AM IST</p>
+                </div>
+            </div>
+        </button>
+        
+        <button onclick="testScheduler()" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-vial text-success text-xl"></i>
+                </div>
+                <div class="text-left">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Test Scheduler</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Run a test job in 10 seconds</p>
+                </div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Active Jobs -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Active Jobs</h2>
+        
+        <div id="jobs-list" class="space-y-3">
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                <p>Loading scheduled jobs...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Job Modal -->
+<div id="add-job-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeAddJobModal()"></div>
+    <div class="modal-content max-w-2xl">
+        <div class="modal-header">
+            <h3 class="text-xl font-semibold">Add Scheduled Job</h3>
+            <button onclick="closeAddJobModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="add-job-form" class="space-y-6">
+                <!-- Job Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Job Type
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="card-modern p-4 cursor-pointer">
+                            <input type="radio" name="job_type" value="daily" checked onchange="updateJobTypeUI()">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-calendar-day text-primary"></i>
+                                <div>
+                                    <p class="font-medium">Daily Schedule</p>
+                                    <p class="text-sm text-gray-600">Run at a specific time every day</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="card-modern p-4 cursor-pointer">
+                            <input type="radio" name="job_type" value="interval" onchange="updateJobTypeUI()">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-sync text-info"></i>
+                                <div>
+                                    <p class="font-medium">Interval Schedule</p>
+                                    <p class="text-sm text-gray-600">Run every N minutes</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Schedule Settings -->
+                <div id="daily-settings">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Time (IST)
+                    </label>
+                    <input type="time" id="job-time" class="form-input" required>
+                </div>
+                
+                <div id="interval-settings" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Interval (minutes)
+                    </label>
+                    <input type="number" id="job-interval" class="form-input" min="5" placeholder="e.g., 30">
+                </div>
+                
+                <!-- Data Settings -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Data Interval
+                    </label>
+                    <select id="data-interval" class="form-select">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="D" selected>Daily</option>
+                        <option value="W">Weekly</option>
+                        <option value="M">Monthly</option>
+                    </select>
+                </div>
+                
+                <!-- Symbol Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Symbols to Download
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="symbol_selection" value="all" checked onchange="updateSymbolSelectionUI()">
+                            <span>All watchlist symbols</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="symbol_selection" value="custom" onchange="updateSymbolSelectionUI()">
+                            <span>Custom selection</span>
+                        </label>
+                    </div>
+                    
+                    <div id="custom-symbols" class="hidden mt-3">
+                        <textarea id="symbols-list" class="form-textarea h-24" 
+                                  placeholder="Enter symbols separated by commas (e.g., RELIANCE,INFY,TCS)"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Job Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Job Name (optional)
+                    </label>
+                    <input type="text" id="job-name" class="form-input" placeholder="e.g., EOD Data Download">
+                </div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" onclick="closeAddJobModal()" class="btn-modern btn-secondary">
+                Cancel
+            </button>
+            <button type="submit" form="add-job-form" class="btn-modern btn-primary">
+                <i class="fas fa-plus"></i>
+                Create Job
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/scheduler.js') }}"></script>
+{% endblock %}

@@ -1,142 +1,276 @@
-# Historify - Stock Historical Data Management App
+# Historify - Modern Stock Data Management Dashboard
 
-Historify is a comprehensive web-based application designed to download, store, and visualize historical and real-time stock market data. The application provides an intuitive interface for managing stock data with features like dynamic watchlists, advanced interactive charts, and incremental data updates.
+Historify is a professional-grade web application for downloading, managing, and visualizing historical stock market data. Built with a modern, intuitive admin dashboard interface, it provides comprehensive tools for bulk data operations, real-time monitoring, and advanced charting capabilities.
 
 ![Historify Architecture](historify/app/static/image/historify.png)
 
-## Features
+## 🚀 Key Features
 
-- **Data Management**: Download historical stock data directly into SQLite database without intermediate CSV files
-- **Multiple Exchanges**: Support for various exchanges including NSE, BSE, NFO, MCX and more
-- **Dynamic Watchlist**: Create and manage watchlists with real-time quotes
-- **Advanced TradingView Charts**: Visualize stock data using TradingView lightweight charts with synchronized indicators
-- **Technical Indicators**: Add popular indicators like EMA and RSI with customizable parameters
-- **Crosshair Synchronization**: Synchronized crosshair between price chart and indicator panels
-- **Multiple Timeframes**: Support for various timeframes (1m, 5m, 15m, 30m, 1h, 1d, 1w)
-- **Batch Processing**: Process symbols in configurable batches with checkpointing
-- **Modern UI**: Clean and responsive interface built with Tailwind CSS and DaisyUI
-- **Light/Dark Mode**: Toggle between light and dark themes
-- **Real-time Data Updates**: Auto-refresh functionality for watchlist and charts
+### Modern Dashboard Interface
+- **Professional Design System**: Clean, modern UI inspired by Stripe, Vercel, and Supabase dashboards
+- **Dark/Light Mode**: Seamless theme switching with persistent preferences
+- **Responsive Layout**: Fully responsive design that works on desktop and mobile devices
+- **Command Palette**: Quick access to all features with keyboard shortcuts (Cmd/Ctrl + K)
 
-## Installation
+### Data Management
+- **Bulk Symbol Import**: 
+  - CSV and Excel file support with drag-and-drop interface
+  - Paste data directly from clipboard
+  - Manual entry with auto-complete
+  - Real-time validation and duplicate detection
+  - Exchange auto-detection with manual override
 
-1. Clone the repository:
-   ```
+- **Bulk Data Export**:
+  - Multiple export formats (Individual CSV, Combined CSV, ZIP archives)
+  - Custom date range selection with presets
+  - Configurable intervals (1m, 5m, 15m, 30m, 1h, daily)
+  - Background processing for large exports
+  - Export queue management with progress tracking
+
+- **Bulk Download**:
+  - One-click download for entire watchlist
+  - Smart scheduling with API rate limit respect
+  - Resume capability for interrupted downloads
+  - Parallel processing with thread pool management
+  - Real-time progress tracking with ETA
+
+### Advanced Features
+- **Multiple Exchange Support**: NSE, BSE, NFO, MCX, CDS and more
+- **Dynamic Watchlist**: Real-time quotes with auto-refresh
+- **TradingView Charts**: Professional-grade charting with technical indicators
+- **Technical Indicators**: EMA, RSI with customizable parameters
+- **Incremental Updates**: Checkpoint system for efficient data updates
+- **Data Quality Monitoring**: Track data completeness and quality metrics
+
+### Scheduler Manager
+- **Automated Data Downloads**: Schedule downloads at specific times in IST
+- **Flexible Scheduling Options**:
+  - Daily schedules at specific times
+  - Interval-based schedules (every N minutes)
+  - Pre-configured market close (3:35 PM IST) and pre-market (8:30 AM IST) schedules
+- **Job Management**: Pause, resume, delete, or run jobs immediately
+- **Background Processing**: Non-blocking scheduled downloads
+- **Watchlist Integration**: Automatically download all watchlist symbols
+- **Custom Symbol Selection**: Schedule downloads for specific symbols
+
+## 📦 Installation
+
+1. **Clone the repository**:
+   ```bash
    git clone https://github.com/marketcalls/historify.git
    cd historify
    ```
 
-2. Create a virtual environment and activate it:
-   ```
+2. **Create virtual environment**:
+   ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install dependencies:
-   ```
+3. **Install dependencies**:
+   ```bash
    pip install -r requirements.txt
    ```
+   
+   **Note**: The scheduler feature requires APScheduler which is included in requirements.txt
 
-4. Create a `.env` file based on `.env.sample` and customize your settings:
-   ```
+4. **Configure environment**:
+   ```bash
    cp .env.sample .env
-   # Edit .env file with your preferred settings
+   # Edit .env with your API keys and settings
    ```
 
-5. Run the application:
-   ```
+5. **Run the application**:
+   ```bash
    python run.py
    ```
 
-6. Access the application at `http://localhost:5001`
+6. **Access the dashboard**:
+   Open `http://localhost:5001` in your browser
 
-## Project Structure
+## 🏗️ Project Structure
 
 ```
 historify/
 ├── app/
 │   ├── models/          # Database models
-│   ├── routes/          # Route blueprints
-│   ├── static/          # Static assets (JS, CSS)
+│   ├── routes/          # API and page routes
+│   ├── static/
+│   │   ├── css/         # Stylesheets and design system
+│   │   ├── js/          # JavaScript modules
+│   │   └── image/       # Static images
 │   ├── templates/       # Jinja2 templates
-│   ├── utils/           # Utility functions
-│   └── __init__.py      # App initialization
-├── instance/            # Instance-specific data (DB file)
-├── .env                 # Environment variables
-├── .gitignore           # Git ignore file
-├── LICENSE              # MIT license
-├── README.md            # This file
-├── requirements.txt     # Dependencies
-└── run.py               # Application entry point
+│   └── utils/           # Utility functions
+├── instance/            # Instance-specific data
+├── requirements.txt     # Python dependencies
+└── run.py              # Application entry point
 ```
 
-## API Endpoints
+## 🎨 Design System
 
-- **`/api/symbols`**: Get list of available symbols
-- **`/api/download`**: Trigger data download and storage
-- **`/api/watchlist`**: Manage watchlist symbols
-- **`/charts/api/chart-data/<symbol>/<exchange>/<interval>/<ema_period>/<rsi_period>`**: Fetch OHLCV data with indicators for TradingView charts
-- **`/api/quotes`**: Fetch real-time quotes for watchlist symbols
+The application features a comprehensive design system with:
 
-## Using TradingView Charts
+- **Color Palette**: Semantic colors for success, warning, error, and info states
+- **Typography**: Inter font family with clear hierarchy
+- **Components**: Reusable buttons, cards, tables, modals, and form elements
+- **Animations**: Smooth transitions and loading states
+- **Icons**: FontAwesome integration for consistent iconography
 
-1. **Accessing Charts**:
-   - Click on the chart icon next to any symbol in your watchlist
-   - Or navigate directly to `/charts?symbol=<SYMBOL>&exchange=<EXCHANGE>`
+## 🔌 API Endpoints
 
-2. **Customizing Indicators**:
-   - Adjust EMA period using the EMA Period selector
-   - Adjust RSI period using the RSI Period selector
-   - Click "Apply" to update the chart with new parameters
+### Data Management
+- `POST /api/download` - Download historical data
+- `POST /api/import-symbols` - Import symbols to watchlist
+- `POST /api/export` - Export data in various formats
+- `GET /api/export/queue` - Check export queue status
+- `GET /api/export/download/<export_id>` - Download exported CSV file
 
-3. **Timeframe Selection**:
-   - Use the timeframe dropdown to select different intervals (1m, 5m, 15m, 30m, 1h, 1d, 1w)
+### Watchlist
+- `GET /api/symbols` - Get available symbols
+- `GET /api/quotes` - Fetch real-time quotes
+- `GET /watchlist/items` - Manage watchlist
 
-4. **Chart Navigation**:
-   - Scroll to zoom in/out
-   - Click and drag to pan the chart
-   - Hover to see detailed price information at any point
-   - Crosshair synchronization allows you to track price and indicators simultaneously
+### Charts
+- `GET /charts/api/chart-data/<symbol>/<exchange>/<interval>/<ema>/<rsi>` - Chart data with indicators
 
-5. **Theme Integration**:
-   - Charts automatically adapt to your selected theme (light/dark mode)
+### Scheduler
+- `GET /api/scheduler/jobs` - Get all scheduled jobs
+- `POST /api/scheduler/jobs` - Create a new scheduled job
+- `DELETE /api/scheduler/jobs/<job_id>` - Delete a scheduled job
+- `POST /api/scheduler/jobs/<job_id>/pause` - Pause a scheduled job
+- `POST /api/scheduler/jobs/<job_id>/resume` - Resume a paused job
+- `POST /api/scheduler/jobs/<job_id>/run` - Run a job immediately
+- `POST /api/scheduler/test` - Create a test job
 
-## Technology Stack
+## 💻 Technology Stack
 
-- **Backend**: Flask, SQLAlchemy, SQLite
-- **Frontend**: Tailwind CSS, DaisyUI, TradingView Lightweight Charts 5.0.0
-- **Data Handling**: Python data processing utilities, Pandas for technical indicators
-- **API Integration**: OpenAlgo API for historical data and quotes
+- **Backend**: Flask, SQLAlchemy, SQLite, APScheduler
+- **Frontend**: 
+  - Tailwind CSS + DaisyUI for styling
+  - TradingView Lightweight Charts 5.0.0
+  - Vanilla JavaScript with modern ES6+
+- **Data Processing**: Pandas, NumPy for technical analysis
+- **API Integration**: OpenAlgo API for market data
+- **Task Scheduling**: APScheduler with IST timezone support
 
-## TradingView Charts Implementation
+## 🔧 Configuration
 
-The application features a sophisticated charting system built with TradingView's Lightweight Charts library:
+### Environment Variables (.env)
+```env
+# API Configuration
+OPENALGO_API_KEY=your_api_key_here
+OPENALGO_API_URL=http://127.0.0.1:5000
 
-- **Candlestick Charts**: Visualize price action with customizable candlestick charts
-- **Technical Indicators**: 
-  - EMA (Exponential Moving Average) with adjustable periods
-  - RSI (Relative Strength Index) with adjustable periods
-- **Chart Synchronization**: Synchronized crosshair between the main price chart and indicator panels
-- **Time-based Navigation**: Easily navigate through different time periods
-- **Responsive Design**: Charts adapt to different screen sizes
-- **Theme Integration**: Charts automatically adapt to light/dark mode
-- **Real-time Updates**: Charts can be configured to update automatically
-- **Error Handling**: Robust error handling for data fetching and processing
+# Database
+DATABASE_URI=sqlite:///historify.db
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Integration with OpenAlgo
-
-To integrate Historify with OpenAlgo, add the following CORS settings to your OpenAlgo `.env` file:
-
+# App Settings
+SECRET_KEY=your_secret_key_here
+DEBUG=False
 ```
+
+### OpenAlgo Integration
+Add to your OpenAlgo `.env`:
+```env
 CORS_ALLOWED_ORIGINS = 'http://127.0.0.1:5000,http://127.0.0.1:5001'
 ```
 
-This allows cross-origin requests between Historify (running on port 5001) and OpenAlgo.
+## 📊 Usage Guide
 
-## Contributions
+### Importing Symbols
+1. Navigate to Import page from sidebar
+2. Choose import method:
+   - **File Upload**: Drag & drop CSV/Excel files
+   - **Paste Data**: Copy/paste from spreadsheets
+   - **Manual Entry**: Type symbols with auto-complete
+3. Map columns and validate data
+4. Review validation results
+5. Import valid symbols
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Exporting Data
+1. Go to Export page
+2. Select symbols (use search/filters)
+3. Choose date range and interval
+4. Select export format
+5. Configure options (headers, metadata)
+6. Start export (background processing for large datasets)
+
+### Bulk Download
+1. Access Download page
+2. Select symbols or use watchlist
+3. Configure intervals and date ranges
+4. Choose download mode (fresh/continue)
+5. Monitor real-time progress
+6. Handle failures with automatic retry
+
+### Scheduler Configuration
+1. Navigate to Scheduler page from sidebar
+2. Quick setup options:
+   - **Market Close Download**: Automatically download at 3:35 PM IST
+   - **Pre-Market Download**: Download before market opens at 8:30 AM IST
+   - **Test Scheduler**: Run a test job in 10 seconds
+3. Custom schedules:
+   - **Daily Schedule**: Set specific time in IST
+   - **Interval Schedule**: Run every N minutes
+   - Configure data interval (1m, 5m, 15m, daily, etc.)
+   - Select all watchlist symbols or specific symbols
+4. Manage jobs:
+   - View next run time and status
+   - Pause/resume jobs as needed
+   - Run jobs immediately
+   - Delete unwanted schedules
+
+## 🚦 Performance Optimizations
+
+- **Batch Processing**: Symbols processed in configurable batches
+- **Rate Limiting**: Respects API rate limits (10 symbols/second)
+- **Database Optimization**: Dynamic table creation per symbol-interval
+- **Lazy Loading**: Virtual scrolling for large datasets
+- **Background Jobs**: Queue system for long-running operations
+- **Efficient Export**: Streams CSV data directly without loading entire dataset in memory
+- **Scheduled Downloads**: Non-blocking background processing for automated downloads
+
+## 🛡️ Security Features
+
+- **Input Validation**: Comprehensive validation for all user inputs
+- **Session Management**: Secure session handling for export operations
+- **Environment Variables**: Sensitive data in .env files
+- **SQL Injection Prevention**: SQLAlchemy ORM queries
+- **XSS Protection**: Template auto-escaping
+- **Safe Dynamic Table Creation**: Sanitized table names for symbol-interval combinations
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 🐛 Known Issues & Fixes
+
+### Data Export
+- **Fixed**: Export was returning only 1 record with incorrect dates
+- **Solution**: Implemented proper database querying and CSV generation from dynamic tables
+
+### Recent Updates
+- **v1.2.0**: Added Scheduler Manager for automated downloads
+- **v1.1.5**: Fixed data export functionality with proper date handling
+- **v1.1.0**: Upgraded to TradingView Charts 5.0.0
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- TradingView for the excellent charting library
+- OpenAlgo for market data API
+- APScheduler for robust task scheduling
+- The Flask and SQLAlchemy communities
+
+## 📞 Support
+
+For issues and feature requests, please use the [GitHub issue tracker](https://github.com/marketcalls/historify/issues).

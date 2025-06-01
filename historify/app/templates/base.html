@@ -4,96 +4,177 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Historify - Stock Historical Data Management{% endblock %}</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='image/historify_favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='image/historify_favicon.png') }}">
+  
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
   <!-- Tailwind CSS and DaisyUI CDN -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@3.5.0/dist/full.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {% block extra_css %}{% endblock %}
 </head>
-<body class="min-h-screen flex flex-col">
-  <!-- Header -->
-  <header class="bg-primary text-primary-content shadow-lg">
-    <div class="navbar container mx-auto">
-      <div class="flex-1">
-        <a href="/" class="btn btn-ghost normal-case text-xl">
-          <span class="font-bold">Historify</span>
+<body class="min-h-screen flex">
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="/" class="flex items-center gap-3">
+        <img src="{{ url_for('static', filename='image/historify_logo.svg') }}" alt="Historify" class="logo">
+        <span class="sidebar-text font-bold text-xl">Historify</span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="sidebar-toggle">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <div class="nav-item">
+        <a href="/" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}">
+          <i class="fas fa-home nav-icon"></i>
+          <span class="sidebar-text">Dashboard</span>
         </a>
       </div>
-      <div class="flex-none gap-2">
-        <!-- Navigation Links -->
-        <div class="hidden md:flex">
-          <ul class="menu menu-horizontal p-0">
-            <li><a href="/" class="font-semibold hover:bg-primary-focus">Dashboard</a></li>
-            <li><a href="/watchlist" class="font-semibold hover:bg-primary-focus">Watchlist</a></li>
-            <li><a href="/charts" class="font-semibold hover:bg-primary-focus">Charts</a></li>
-          </ul>
+      
+      <div class="nav-item">
+        <a href="/watchlist" class="nav-link {% if request.endpoint == 'main.watchlist' %}active{% endif %}">
+          <i class="fas fa-eye nav-icon"></i>
+          <span class="sidebar-text">Watchlist</span>
+        </a>
+      </div>
+      
+      <div class="nav-item">
+        <a href="/import" class="nav-link {% if request.endpoint == 'main.import_symbols' %}active{% endif %}">
+          <i class="fas fa-file-import nav-icon"></i>
+          <span class="sidebar-text">Import</span>
+        </a>
+      </div>
+      
+      <div class="nav-item">
+        <a href="/export" class="nav-link {% if request.endpoint == 'main.export_data' %}active{% endif %}">
+          <i class="fas fa-file-export nav-icon"></i>
+          <span class="sidebar-text">Export</span>
+        </a>
+      </div>
+      
+      <div class="nav-item">
+        <a href="/download" class="nav-link {% if request.endpoint == 'main.bulk_download' %}active{% endif %}">
+          <i class="fas fa-download nav-icon"></i>
+          <span class="sidebar-text">Download</span>
+        </a>
+      </div>
+      
+      <div class="nav-item">
+        <a href="/charts" class="nav-link {% if request.endpoint == 'charts.index' %}active{% endif %}">
+          <i class="fas fa-chart-line nav-icon"></i>
+          <span class="sidebar-text">Charts</span>
+        </a>
+      </div>
+      
+      <div class="nav-item">
+        <a href="/scheduler" class="nav-link {% if request.endpoint == 'scheduler.scheduler_page' %}active{% endif %}">
+          <i class="fas fa-clock nav-icon"></i>
+          <span class="sidebar-text">Scheduler</span>
+        </a>
+      </div>
+      
+      <div class="nav-item mt-auto">
+        <a href="/settings" class="nav-link {% if request.endpoint == 'main.settings' %}active{% endif %}">
+          <i class="fas fa-cog nav-icon"></i>
+          <span class="sidebar-text">Settings</span>
+        </a>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer p-4 border-t border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between">
+        <span class="sidebar-text text-xs text-gray-500">Theme</span>
+        <label class="swap swap-rotate btn btn-ghost btn-sm" id="theme-toggle">
+          <svg class="swap-on h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="swap-off h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col min-h-screen">
+    <!-- Top Header -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
+            {% block page_title %}Dashboard{% endblock %}
+          </h1>
+          {% block breadcrumb %}{% endblock %}
         </div>
         
-        <!-- Theme toggle switch -->
-        <div class="flex items-center">
-          <label class="swap swap-rotate btn btn-ghost btn-circle" id="theme-toggle">
-            <!-- Sun icon -->
-            <svg class="swap-on h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-            <!-- Moon icon -->
-            <svg class="swap-off h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-          </label>
+        <div class="flex items-center gap-4">
+          <!-- Search (Command Palette Trigger) -->
+          <button class="btn-modern btn-ghost" id="command-palette-trigger">
+            <i class="fas fa-search"></i>
+            <span class="hidden md:inline">Search</span>
+            <kbd class="hidden md:inline ml-2 text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">⌘K</kbd>
+          </button>
         </div>
-        
-        <!-- Mobile menu button -->
-        <div class="dropdown dropdown-end md:hidden">
-          <label tabindex="0" class="btn btn-ghost btn-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="h-6 w-6">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </label>
-          <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-            <li><a href="/">Dashboard</a></li>
-            <li><a href="/watchlist">Watchlist</a></li>
-            <li><a href="/charts">Charts</a></li>
-          </ul>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6 bg-gray-50 dark:bg-gray-900">
+      <div class="container-fluid">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+
+  <!-- Command Palette Modal -->
+  <div id="command-palette" class="hidden fixed inset-0 z-50">
+    <div class="modal-backdrop" onclick="closeCommandPalette()"></div>
+    <div class="modal-container">
+      <div class="modal-content max-w-2xl">
+        <div class="p-4">
+          <div class="input-group">
+            <input type="text" class="input-modern" id="command-search" placeholder="Search for symbols, actions, or settings..." autofocus>
+          </div>
+          <div class="mt-4 max-h-96 overflow-y-auto" id="command-results">
+            <!-- Results will be populated here -->
+          </div>
         </div>
       </div>
     </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="flex-1 container mx-auto px-4 py-6">
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- Footer -->
-  <footer class="bg-neutral text-neutral-content p-4">
-    <div class="container mx-auto">
-      <div class="flex flex-col md:flex-row justify-between items-center">
-        <div class="mb-4 md:mb-0">
-          <p>&copy; 2025 Historify. All rights reserved.</p>
-        </div>
-        <div class="flex space-x-4">
-          <a href="#" class="hover:text-primary">Terms</a>
-          <a href="#" class="hover:text-primary">Privacy</a>
-          <a href="#" class="hover:text-primary">Contact</a>
-        </div>
-      </div>
-    </div>
-  </footer>
+  </div>
 
   <!-- JavaScript -->
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/command-palette.js') }}"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

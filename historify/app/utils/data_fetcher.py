@@ -55,8 +55,10 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
     Raises:
         ValueError: If API is not available or returns an error
     """
-    api_key = os.getenv('OPENALGO_API_KEY')
-    host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
+    # Get API settings from database instead of environment
+    from app.models.settings import AppSettings
+    api_key = AppSettings.get_value('openalgo_api_key')
+    host = AppSettings.get_value('openalgo_api_host', 'http://127.0.0.1:5000')
     
     if not OPENALGO_AVAILABLE:
         logging.error(f"Cannot fetch data for {symbol}: OpenAlgo API module is not available")
@@ -64,7 +66,7 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
         
     if not api_key:
         logging.error(f"Cannot fetch data for {symbol}: API key is missing")
-        raise ValueError(f"OpenAlgo API key is missing. Please check your .env file.")
+        raise ValueError(f"OpenAlgo API key is missing. Please configure it in Settings page.")
     
     try:
         # Initialize OpenAlgo client with host parameter
@@ -312,8 +314,10 @@ def fetch_realtime_quotes(symbols, exchanges=None):
         List of quote data for each symbol
     """
     quotes = []
-    api_key = os.getenv('OPENALGO_API_KEY')
-    host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
+    # Get API settings from database
+    from app.models.settings import AppSettings
+    api_key = AppSettings.get_value('openalgo_api_key')
+    host = AppSettings.get_value('openalgo_api_host', 'http://127.0.0.1:5000')
     
     # Default to NSE if exchanges is not provided
     if exchanges is None:
@@ -328,7 +332,7 @@ def fetch_realtime_quotes(symbols, exchanges=None):
         
     if not api_key:
         logging.error("Cannot fetch quotes: API key is missing")
-        raise ValueError("OpenAlgo API key is missing. Please check your .env file.")
+        raise ValueError("OpenAlgo API key is missing. Please configure it in Settings page.")
     
     # Initialize OpenAlgo client with api_key and host
     logging.info(f"Initializing OpenAlgo client with host: {host}")
@@ -461,8 +465,9 @@ def get_supported_intervals():
     if OPENALGO_AVAILABLE:
         try:
             # Initialize OpenAlgo client
-            api_key = os.getenv('OPENALGO_API_KEY')
-            host = os.getenv('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
+            from app.models.settings import AppSettings
+            api_key = AppSettings.get_value('openalgo_api_key')
+            host = AppSettings.get_value('openalgo_api_host', 'http://127.0.0.1:5000')
             client = api(api_key=api_key, host=host)
             
             # Fetch supported intervals from the API

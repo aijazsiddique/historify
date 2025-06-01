@@ -242,10 +242,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show loading state
             showLoading(true);
             
-            // Map interval values to API format if needed
+            // Use the interval value directly - no mapping needed
+            // The database stores intervals as they are (D, W, 1m, 5m, etc.)
             let apiInterval = timeframeSelector.value;
-            if (apiInterval === 'D') apiInterval = '1d';
-            if (apiInterval === 'W') apiInterval = '1w';
+            console.log('Selected timeframe:', apiInterval);
             
             // Fetch data from API
             const response = await fetch(`/charts/api/chart-data/${symbolSelector.value}/${exchangeSelector.value}/${apiInterval}/${emaPeriodInput.value}/${rsiPeriodInput.value}`);

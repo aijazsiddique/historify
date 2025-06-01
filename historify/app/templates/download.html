@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Download - Historify{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Bulk Download</h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">Download historical data for multiple symbols</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="select-all-btn" onclick="selectAllSymbols()" class="btn-modern btn-secondary">
+                    <i class="fas fa-check-square"></i>
+                    Select All
+                </button>
+                <button id="clear-all-btn" onclick="clearAllSymbols()" class="btn-modern btn-secondary">
+                    <i class="fas fa-square"></i>
+                    Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Configuration -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Symbol Selection -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Symbols</h2>
+            
+            <!-- Search -->
+            <div class="mb-4">
+                <input type="text" id="symbol-search" onkeyup="filterSymbols()" 
+                       class="form-input" placeholder="Search symbols...">
+            </div>
+            
+            <!-- Symbol Grid -->
+            <div id="symbol-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-96 overflow-y-auto">
+                <!-- Symbols will be loaded here -->
+                <div class="text-center col-span-full py-8 text-gray-500">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                    <p>Loading symbols...</p>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Selected: <span id="selected-count" class="font-semibold">0</span> symbols
+            </div>
+        </div>
+
+        <!-- Download Settings -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Settings</h2>
+            
+            <form id="download-form" class="space-y-4">
+                <!-- Date Range -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Date Range
+                    </label>
+                    <div class="space-y-2">
+                        <input type="date" id="start-date" class="form-input" required>
+                        <input type="date" id="end-date" class="form-input" required>
+                    </div>
+                </div>
+                
+                <!-- Interval -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Interval
+                    </label>
+                    <select id="interval" class="form-select">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="D" selected>Daily</option>
+                        <option value="W">Weekly</option>
+                        <option value="M">Monthly</option>
+                    </select>
+                </div>
+                
+                <!-- Download Mode -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Mode
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="mode" value="fresh" checked class="radio radio-primary">
+                            <span>Fresh Download</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="mode" value="continue" class="radio radio-primary">
+                            <span>Continue from Checkpoint</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Start Button -->
+                <button type="submit" id="download-btn" class="btn-modern btn-primary w-full">
+                    <i class="fas fa-download"></i>
+                    Start Download
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div id="progress-section" class="hidden bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Progress</h2>
+        
+        <!-- Overall Progress -->
+        <div class="mb-6">
+            <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <span>Overall Progress</span>
+                <span id="overall-percentage">0%</span>
+            </div>
+            <div class="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div id="overall-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                <span id="progress-status">Preparing...</span>
+                <span>ETA: <span id="eta">Calculating...</span></span>
+            </div>
+        </div>
+        
+        <!-- Symbol Progress List -->
+        <div class="space-y-2 max-h-64 overflow-y-auto" id="symbol-progress-list">
+            <!-- Individual symbol progress will be shown here -->
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-center">
+                <p class="text-2xl font-bold text-success" id="success-count">0</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Success</p>
+            </div>
+            <div class="text-center">
+                <p class="text-2xl font-bold text-warning" id="pending-count">0</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Pending</p>
+            </div>
+            <div class="text-center">
+                <p class="text-2xl font-bold text-error" id="failed-count">0</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Failed</p>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-2 mt-6">
+            <button onclick="pauseDownload()" id="pause-btn" class="btn-modern btn-secondary">
+                <i class="fas fa-pause"></i>
+                Pause
+            </button>
+            <button onclick="cancelDownload()" class="btn-modern btn-secondary">
+                <i class="fas fa-stop"></i>
+                Cancel
+            </button>
+            <button onclick="retryFailed()" id="retry-btn" class="btn-modern btn-secondary" disabled>
+                <i class="fas fa-redo"></i>
+                Retry Failed
+            </button>
+        </div>
+    </div>
+
+    <!-- Download History -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Downloads</h2>
+        <div id="download-history" class="space-y-2">
+            <!-- Download history will be loaded here -->
+            <p class="text-center text-gray-500 py-4">No recent downloads</p>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/download.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Import Symbols - Historify{% endblock %}
+{% block page_title %}Import Symbols{% endblock %}
+
+{% block breadcrumb %}
+<nav class="text-sm text-gray-500">
+    <ol class="flex items-center space-x-2">
+        <li><a href="/" class="hover:text-primary">Dashboard</a></li>
+        <li><span>/</span></li>
+        <li class="text-gray-900 dark:text-white">Import Symbols</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Import Options -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <button onclick="selectImportMethod('file')" class="card-modern hover:border-primary transition-all group">
+        <div class="card-body text-center">
+            <div class="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
+                <i class="fas fa-file-csv text-primary text-2xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg mb-2">CSV/Excel Import</h3>
+            <p class="text-sm text-muted">Upload CSV or Excel files with symbol data</p>
+        </div>
+    </button>
+
+    <button onclick="selectImportMethod('paste')" class="card-modern hover:border-primary transition-all group">
+        <div class="card-body text-center">
+            <div class="w-16 h-16 bg-success/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-success/20 transition-colors">
+                <i class="fas fa-paste text-success text-2xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg mb-2">Paste Data</h3>
+            <p class="text-sm text-muted">Copy and paste symbol lists directly</p>
+        </div>
+    </button>
+
+    <button onclick="selectImportMethod('manual')" class="card-modern hover:border-primary transition-all group">
+        <div class="card-body text-center">
+            <div class="w-16 h-16 bg-info/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-info/20 transition-colors">
+                <i class="fas fa-keyboard text-info text-2xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg mb-2">Manual Entry</h3>
+            <p class="text-sm text-muted">Type symbols manually with auto-complete</p>
+        </div>
+    </button>
+</div>
+
+<!-- File Import Section -->
+<div id="file-import-section" class="card-modern hidden">
+    <div class="card-header">
+        <h2 class="text-xl font-semibold">Import from File</h2>
+    </div>
+    <div class="card-body">
+        <!-- Drop Zone -->
+        <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-primary transition-colors">
+            <input type="file" id="file-input" accept=".csv,.xlsx,.xls" class="hidden" multiple>
+            <div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400"></i>
+            </div>
+            <p class="text-lg font-medium mb-2">Drop files here or click to browse</p>
+            <p class="text-sm text-muted mb-4">Supports CSV and Excel files (.csv, .xlsx, .xls)</p>
+            <button onclick="document.getElementById('file-input').click()" class="btn-modern btn-primary">
+                <i class="fas fa-folder-open"></i>
+                Browse Files
+            </button>
+        </div>
+
+        <!-- File List -->
+        <div id="file-list" class="mt-6 hidden">
+            <h3 class="text-lg font-medium mb-4">Selected Files</h3>
+            <div id="file-items" class="space-y-2"></div>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="preview-section" class="mt-6 hidden">
+            <h3 class="text-lg font-medium mb-4">Data Preview</h3>
+            <div class="overflow-x-auto">
+                <table id="preview-table" class="table-modern">
+                    <thead>
+                        <tr id="preview-headers"></tr>
+                    </thead>
+                    <tbody id="preview-body"></tbody>
+                </table>
+            </div>
+            
+            <!-- Column Mapping -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Symbol Column</label>
+                    <select id="symbol-column" class="input-modern"></select>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Exchange Column (Optional)</label>
+                    <select id="exchange-column" class="input-modern">
+                        <option value="">Auto-detect</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Default Exchange</label>
+                    <select id="default-exchange" class="input-modern">
+                        <option value="NSE">NSE</option>
+                        <option value="BSE">BSE</option>
+                        <option value="NFO">NFO</option>
+                        <option value="MCX">MCX</option>
+                        <option value="CDS">CDS</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation Results -->
+        <div id="validation-results" class="mt-6 hidden">
+            <h3 class="text-lg font-medium mb-4">Validation Results</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="bg-success/10 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-check-circle text-success text-xl"></i>
+                        <div>
+                            <p class="text-sm text-muted">Valid Symbols</p>
+                            <p class="text-2xl font-bold text-success" id="valid-count">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-warning/10 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-exclamation-triangle text-warning text-xl"></i>
+                        <div>
+                            <p class="text-sm text-muted">Duplicates</p>
+                            <p class="text-2xl font-bold text-warning" id="duplicate-count">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-error/10 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-times-circle text-error text-xl"></i>
+                        <div>
+                            <p class="text-sm text-muted">Invalid</p>
+                            <p class="text-2xl font-bold text-error" id="invalid-count">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Results -->
+            <div id="validation-details" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div id="import-actions" class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 hidden">
+            <button onclick="resetImport()" class="btn-modern btn-secondary">
+                <i class="fas fa-redo"></i>
+                Reset
+            </button>
+            <button onclick="processImport()" class="btn-modern btn-primary" id="import-btn">
+                <i class="fas fa-file-import"></i>
+                Import Valid Symbols
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Paste Import Section -->
+<div id="paste-import-section" class="card-modern hidden">
+    <div class="card-header">
+        <h2 class="text-xl font-semibold">Paste Symbol Data</h2>
+    </div>
+    <div class="card-body">
+        <div class="mb-4">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                Paste your symbol list below (one per line or comma-separated)
+            </label>
+            <textarea id="paste-input" rows="10" class="input-modern font-mono" 
+                placeholder="Example:
+RELIANCE,NSE
+INFY,NSE
+TCS
+WIPRO"></textarea>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Format</label>
+                <select id="paste-format" class="input-modern">
+                    <option value="auto">Auto-detect</option>
+                    <option value="symbol-only">Symbol only</option>
+                    <option value="symbol-exchange">Symbol,Exchange</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Default Exchange</label>
+                <select id="paste-default-exchange" class="input-modern">
+                    <option value="NSE">NSE</option>
+                    <option value="BSE">BSE</option>
+                    <option value="NFO">NFO</option>
+                    <option value="MCX">MCX</option>
+                    <option value="CDS">CDS</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <button onclick="resetImport()" class="btn-modern btn-secondary">
+                <i class="fas fa-times"></i>
+                Cancel
+            </button>
+            <button onclick="validatePastedData()" class="btn-modern btn-primary">
+                <i class="fas fa-check"></i>
+                Validate & Import
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Manual Entry Section -->
+<div id="manual-import-section" class="card-modern hidden">
+    <div class="card-header">
+        <h2 class="text-xl font-semibold">Manual Symbol Entry</h2>
+    </div>
+    <div class="card-body">
+        <div class="mb-6">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                Add symbols one by one
+            </label>
+            <div class="flex gap-3">
+                <input type="text" id="manual-symbol" class="input-modern flex-1" 
+                    placeholder="Enter symbol (e.g., RELIANCE)" autocomplete="off">
+                <select id="manual-exchange" class="input-modern w-32">
+                    <option value="NSE">NSE</option>
+                    <option value="BSE">BSE</option>
+                    <option value="NFO">NFO</option>
+                    <option value="MCX">MCX</option>
+                    <option value="CDS">CDS</option>
+                </select>
+                <button onclick="addManualSymbol()" class="btn-modern btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Add
+                </button>
+            </div>
+            <div id="symbol-suggestions" class="mt-2 hidden"></div>
+        </div>
+
+        <!-- Added Symbols List -->
+        <div id="manual-symbols-list" class="hidden">
+            <h3 class="text-lg font-medium mb-4">Added Symbols</h3>
+            <div id="manual-symbols-items" class="space-y-2 max-h-64 overflow-y-auto"></div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button onclick="resetImport()" class="btn-modern btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button onclick="importManualSymbols()" class="btn-modern btn-primary">
+                    <i class="fas fa-file-import"></i>
+                    Import All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Progress Modal -->
+<div id="import-progress-modal" class="hidden fixed inset-0 z-50">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+        <div class="modal-content max-w-md">
+            <div class="p-6">
+                <h3 class="text-xl font-semibold mb-4">Importing Symbols</h3>
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span>Progress</span>
+                        <span id="import-progress-text">0%</span>
+                    </div>
+                    <div class="progress-linear">
+                        <div id="import-progress-bar" class="progress-linear-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="import-log" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-48 overflow-y-auto text-sm font-mono"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/import.js') }}"></script>
+{% endblock %}

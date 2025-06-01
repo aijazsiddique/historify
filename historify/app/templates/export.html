@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Export Data - Historify{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Data Export</h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">Export historical data in various formats</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-csv text-primary text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">Individual CSV</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">One CSV file per symbol</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-success/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-alt text-success text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">Combined CSV</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">All symbols in one file</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-info/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-archive text-info text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">ZIP Archive</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Multiple files bundled</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Export Configuration -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Symbol Selection -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Symbols</h2>
+            
+            <!-- Search and Actions -->
+            <div class="flex gap-4 mb-4">
+                <input type="text" id="symbol-search" onkeyup="filterSymbols()" 
+                       class="form-input flex-1" placeholder="Search symbols...">
+                <button onclick="selectAllSymbols()" class="btn-modern btn-secondary">
+                    <i class="fas fa-check-square"></i>
+                    Select All
+                </button>
+                <button onclick="deselectAllSymbols()" class="btn-modern btn-secondary">
+                    <i class="fas fa-square"></i>
+                    Clear
+                </button>
+                <button onclick="selectWatchlist()" class="btn-modern btn-secondary">
+                    <i class="fas fa-eye"></i>
+                    Watchlist
+                </button>
+            </div>
+            
+            <!-- Symbol Grid -->
+            <div id="symbol-checkboxes" class="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <!-- Symbols will be loaded here -->
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                    <p>Loading symbols...</p>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Selected: <span id="selected-count" class="font-semibold">0</span> symbols
+            </div>
+        </div>
+
+        <!-- Export Settings -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Export Settings</h2>
+            
+            <form id="export-form" class="space-y-4">
+                <!-- Date Range -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Date Range
+                    </label>
+                    <select id="date-range" class="form-select" onchange="toggleCustomDateRange()">
+                        <option value="1m">Last 1 Month</option>
+                        <option value="3m">Last 3 Months</option>
+                        <option value="6m">Last 6 Months</option>
+                        <option value="1y">Last 1 Year</option>
+                        <option value="2y">Last 2 Years</option>
+                        <option value="ytd">Year to Date</option>
+                        <option value="all">All Available Data</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                
+                <!-- Custom Date Range -->
+                <div id="custom-date-range" class="hidden space-y-2">
+                    <input type="date" id="start-date" class="form-input">
+                    <input type="date" id="end-date" class="form-input">
+                </div>
+                
+                <!-- Interval -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Data Interval
+                    </label>
+                    <select id="interval" class="form-select">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="D" selected>Daily</option>
+                        <option value="W">Weekly</option>
+                        <option value="M">Monthly</option>
+                    </select>
+                </div>
+                
+                <!-- Format -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Export Format
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="format" value="individual" checked class="radio radio-primary">
+                            <span>Individual CSV files</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="format" value="combined" class="radio radio-primary">
+                            <span>Combined CSV file</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="format" value="zip" class="radio radio-primary">
+                            <span>ZIP archive</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Options -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Export Options
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="include-headers" checked class="checkbox checkbox-primary">
+                            <span>Include column headers</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="include-metadata" class="checkbox checkbox-primary">
+                            <span>Include metadata</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="include-summary" class="checkbox checkbox-primary">
+                            <span>Include summary stats</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="space-y-2">
+                    <button type="button" onclick="previewExport()" class="btn-modern btn-secondary w-full">
+                        <i class="fas fa-eye"></i>
+                        Preview Export
+                    </button>
+                    <button type="submit" id="export-btn" class="btn-modern btn-primary w-full">
+                        <i class="fas fa-file-export"></i>
+                        Start Export
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Export Queue (Hidden by default, shown when there are exports) -->
+    <div id="export-queue-section" class="mt-6 bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6" style="display: none;">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Export Queue</h2>
+        <div id="export-queue">
+            <!-- Queue items will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closePreviewModal()"></div>
+    <div class="modal-content max-w-4xl">
+        <div class="modal-header">
+            <h3 class="text-xl font-semibold">Export Preview</h3>
+            <button onclick="closePreviewModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Summary -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Symbols</p>
+                    <p class="text-2xl font-bold" id="preview-symbols">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Date Range</p>
+                    <p class="text-sm font-medium" id="preview-range">-</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Format</p>
+                    <p class="text-sm font-medium" id="preview-format">-</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Est. Size</p>
+                    <p class="text-sm font-medium" id="preview-size">-</p>
+                </div>
+            </div>
+            
+            <!-- Sample Data -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full table">
+                    <thead id="preview-thead">
+                        <!-- Headers will be generated -->
+                    </thead>
+                    <tbody id="preview-tbody">
+                        <!-- Sample rows will be generated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button onclick="closePreviewModal()" class="btn-modern btn-secondary">
+                Close Preview
+            </button>
+            <button onclick="closePreviewModal(); document.getElementById('export-form').dispatchEvent(new Event('submit'))" class="btn-modern btn-primary">
+                Proceed with Export
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/export.js') }}"></script>
+{% endblock %}

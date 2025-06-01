@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Historify{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">Configure your Historify application</p>
+    </div>
+
+    <!-- Settings Sections -->
+    <div class="space-y-6">
+        <!-- API Configuration -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-key text-blue-500"></i>
+                    API Configuration
+                </h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Configure your OpenAlgo API connection settings</p>
+            </div>
+            
+            <div class="p-6">
+                <form id="api-settings-form" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-server mr-1"></i>
+                                OpenAlgo API Host
+                                <span id="api-url-status" class="ml-2 text-xs font-normal"></span>
+                            </label>
+                            <input type="url" id="api-url" 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white" 
+                                   value="http://127.0.0.1:5000" 
+                                   placeholder="http://127.0.0.1:5000"
+                                   required>
+                            <p class="text-xs text-gray-500 mt-1">The base URL for your OpenAlgo API instance</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-key mr-1"></i>
+                                API Key
+                                <span id="api-key-status" class="ml-2 text-xs font-normal"></span>
+                            </label>
+                            <div class="relative">
+                                <input type="password" id="api-key" 
+                                       class="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white" 
+                                       placeholder="Enter your API key">
+                                <button type="button" onclick="togglePasswordVisibility('api-key')" 
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Your OpenAlgo API authentication key</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" onclick="testAPIConnection()" 
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-plug"></i>
+                            Test Connection
+                        </button>
+                        <button type="submit" 
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-save"></i>
+                            Save API Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-database text-green-500"></i>
+                    Data Management
+                </h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Monitor database status and manage stored data</p>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- Database Statistics -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">Database Size</p>
+                                <p class="text-xl font-bold text-blue-900 dark:text-blue-100" id="db-size">Calculating...</p>
+                            </div>
+                            <i class="fas fa-hdd text-blue-500 text-2xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-green-700 dark:text-green-300">Total Records</p>
+                                <p class="text-xl font-bold text-green-900 dark:text-green-100" id="total-records">Calculating...</p>
+                            </div>
+                            <i class="fas fa-chart-line text-green-500 text-2xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-purple-700 dark:text-purple-300">Dynamic Tables</p>
+                                <p class="text-xl font-bold text-purple-900 dark:text-purple-100" id="table-count">Calculating...</p>
+                            </div>
+                            <i class="fas fa-table text-purple-500 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Actions -->
+                <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button onclick="clearCache()" 
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-broom"></i>
+                        Clear Cache
+                    </button>
+                    <button onclick="optimizeDatabase()" 
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-database"></i>
+                        Optimize Database
+                    </button>
+                    <button onclick="exportDatabase()" 
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-download"></i>
+                        Export Database
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Settings -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Settings</h2>
+            
+            <form id="download-settings-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Batch Size
+                    </label>
+                    <input type="number" id="batch-size" class="form-input" 
+                           value="10" min="1" max="50">
+                    <p class="text-sm text-gray-500 mt-1">Number of symbols to process per batch</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Rate Limit Delay (ms)
+                    </label>
+                    <input type="number" id="rate-limit" class="form-input" 
+                           value="100" min="0" max="5000">
+                    <p class="text-sm text-gray-500 mt-1">Delay between API requests in milliseconds</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Default Date Range
+                    </label>
+                    <select id="default-range" class="form-select">
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                        <option value="180">Last 180 days</option>
+                        <option value="365">Last 1 year</option>
+                        <option value="730">Last 2 years</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-modern btn-primary">
+                    <i class="fas fa-save"></i>
+                    Save Download Settings
+                </button>
+            </form>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Display Settings</h2>
+            
+            <form id="display-settings-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Theme
+                    </label>
+                    <select id="theme-select" class="form-select" onchange="updateTheme(this.value)">
+                        <option value="system">System Default</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Chart Height
+                    </label>
+                    <input type="number" id="chart-height" class="form-input" 
+                           value="400" min="200" max="800">
+                    <p class="text-sm text-gray-500 mt-1">Default chart height in pixels</p>
+                </div>
+                
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="auto-refresh" class="checkbox checkbox-primary" checked>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Enable auto-refresh for real-time quotes
+                        </span>
+                    </label>
+                </div>
+                
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="show-tooltips" class="checkbox checkbox-primary" checked>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Show tooltips
+                        </span>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-modern btn-primary">
+                    <i class="fas fa-save"></i>
+                    Save Display Settings
+                </button>
+            </form>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-red-900 dark:text-red-200 mb-4">Danger Zone</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <button onclick="clearAllData()" class="btn-modern bg-red-600 hover:bg-red-700 text-white">
+                        <i class="fas fa-trash-alt"></i>
+                        Clear All Data
+                    </button>
+                    <p class="text-sm text-red-700 dark:text-red-300 mt-2">
+                        This will delete all downloaded historical data. This action cannot be undone.
+                    </p>
+                </div>
+                
+                <div>
+                    <button onclick="resetSettings()" class="btn-modern bg-red-600 hover:bg-red-700 text-white">
+                        <i class="fas fa-undo"></i>
+                        Reset to Defaults
+                    </button>
+                    <p class="text-sm text-red-700 dark:text-red-300 mt-2">
+                        Reset all settings to their default values.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}

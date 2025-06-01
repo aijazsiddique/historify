@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historify Logo Preview</title>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            margin: 40px;
+            background: #f8fafc;
+        }
+        .logo-preview {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .logo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: center;
+        }
+        .logo-item {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        h1 { color: #1f2937; margin-bottom: 30px; }
+        h2 { color: #374151; margin-bottom: 15px; }
+        .size-demo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Historify Logo Variations</h1>
+    
+    <div class="logo-preview">
+        <h2>Main Logo (SVG)</h2>
+        <div class="logo-grid">
+            <div class="logo-item">
+                <img src="historify_logo.svg" alt="Historify Logo" style="width: 150px; height: 150px;">
+                <p>Full Size (150px)</p>
+            </div>
+            <div class="logo-item">
+                <img src="historify_logo.svg" alt="Historify Logo" style="width: 100px; height: 100px;">
+                <p>Medium (100px)</p>
+            </div>
+            <div class="logo-item">
+                <img src="historify_logo.svg" alt="Historify Logo" style="width: 64px; height: 64px;">
+                <p>Small (64px)</p>
+            </div>
+            <div class="logo-item">
+                <img src="historify_logo.svg" alt="Historify Logo" style="width: 40px; height: 40px;">
+                <p>Sidebar (40px)</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="logo-preview">
+        <h2>Favicon (SVG)</h2>
+        <div class="logo-grid">
+            <div class="logo-item">
+                <img src="historify_favicon.svg" alt="Historify Favicon" style="width: 64px; height: 64px;">
+                <p>Favicon 64px</p>
+            </div>
+            <div class="logo-item">
+                <img src="historify_favicon.svg" alt="Historify Favicon" style="width: 32px; height: 32px;">
+                <p>Favicon 32px</p>
+            </div>
+            <div class="logo-item">
+                <img src="historify_favicon.svg" alt="Historify Favicon" style="width: 16px; height: 16px;">
+                <p>Favicon 16px</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="logo-preview">
+        <h2>Usage Examples</h2>
+        <div style="background: #2563eb; padding: 20px; border-radius: 8px; color: white; margin-bottom: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="historify_logo.svg" alt="Historify" style="width: 40px; height: 40px;">
+                <span style="font-size: 18px; font-weight: 600;">Historify</span>
+            </div>
+        </div>
+        
+        <div style="background: #1f2937; padding: 20px; border-radius: 8px; color: white;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="historify_logo.svg" alt="Historify" style="width: 40px; height: 40px;">
+                <span style="font-size: 18px; font-weight: 600;">Historify</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

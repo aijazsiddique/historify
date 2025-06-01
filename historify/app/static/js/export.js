@@ -25,19 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadSymbols() {
     try {
-        console.log('Fetching symbols from /api/symbols');
         const response = await fetch('/api/symbols');
-        console.log('API response status:', response.status);
-        
         if (response.ok) {
-            const data = await response.json();
-            console.log('Symbols received:', data);
-            console.log('Number of symbols:', data.length);
-            
-            availableSymbols = data;
+            availableSymbols = await response.json();
             displaySymbols();
         } else {
-            console.error('API returned error status:', response.status);
             document.getElementById('symbol-checkboxes').innerHTML = 
                 `<p class="text-center text-red-500">Failed to load symbols. Status: ${response.status}</p>`;
         }
@@ -50,18 +42,14 @@ async function loadSymbols() {
 }
 
 function displaySymbols() {
-    console.log('Displaying symbols, count:', availableSymbols.length);
-    
     const container = document.getElementById('symbol-checkboxes');
     if (!container) {
-        console.error('Symbol container element not found!');
         return;
     }
     
     container.innerHTML = '';
     
     if (availableSymbols.length === 0) {
-        console.warn('No symbols available to display');
         container.innerHTML = '<p class="text-center text-gray-500">No symbols available</p>';
         return;
     }
@@ -69,11 +57,8 @@ function displaySymbols() {
     // Group symbols by exchange
     const grouped = {};
     try {
-        console.log('Grouping symbols by exchange...');
-        availableSymbols.forEach((symbol, index) => {
-            console.log(`Processing symbol ${index}:`, symbol);
+        availableSymbols.forEach(symbol => {
             if (!symbol.exchange) {
-                console.warn(`Symbol missing exchange:`, symbol);
                 symbol.exchange = 'Unknown';
             }
             
@@ -82,7 +67,6 @@ function displaySymbols() {
             }
             grouped[symbol.exchange].push(symbol);
         });
-        console.log('Grouped symbols:', grouped);
     } catch (error) {
         console.error('Error processing symbols:', error);
         container.innerHTML = `<p class="text-center text-red-500">Error processing symbols: ${error.message}</p>`;

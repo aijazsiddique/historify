@@ -23,24 +23,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadSymbols() {
     try {
-        console.log('[DOWNLOAD] Fetching symbols from /api/symbols');
         const response = await fetch('/api/symbols');
-        console.log('[DOWNLOAD] API response status:', response.status);
-        
         if (response.ok) {
-            const data = await response.json();
-            console.log('[DOWNLOAD] Symbols received:', data);
-            console.log('[DOWNLOAD] Number of symbols:', data.length);
-            
-            availableSymbols = data;
+            availableSymbols = await response.json();
             displaySymbols();
         } else {
-            console.error('[DOWNLOAD] API returned error status:', response.status);
             document.getElementById('symbol-grid').innerHTML = 
                 `<p class="text-center text-red-500">Failed to load symbols. Status: ${response.status}</p>`;
         }
     } catch (error) {
-        console.error('[DOWNLOAD] Error loading symbols:', error);
+        console.error('Error loading symbols:', error);
         document.getElementById('symbol-grid').innerHTML = 
             `<p class="text-center text-red-500">Error: ${error.message}</p>`;
         showToast('Error loading symbols', 'error');
@@ -48,16 +40,12 @@ async function loadSymbols() {
 }
 
 function displaySymbols() {
-    console.log('[DOWNLOAD] Displaying symbols, count:', availableSymbols.length);
-    
     const grid = document.getElementById('symbol-grid');
     if (!grid) {
-        console.error('[DOWNLOAD] Symbol grid element not found!');
         return;
     }
     
     if (availableSymbols.length === 0) {
-        console.warn('[DOWNLOAD] No symbols available to display');
         grid.innerHTML = '<p class="text-center col-span-full text-gray-500">No symbols available</p>';
         return;
     }
@@ -65,9 +53,7 @@ function displaySymbols() {
     grid.innerHTML = '';
     
     try {
-        console.log('[DOWNLOAD] Creating symbol checkboxes...');
-        availableSymbols.forEach((symbol, index) => {
-            console.log(`[DOWNLOAD] Processing symbol ${index}:`, symbol);
+        availableSymbols.forEach(symbol => {
             const label = document.createElement('label');
             label.className = 'flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer';
             label.innerHTML = `
@@ -228,10 +214,24 @@ function handleDownloadResult(result) {
         showToast('Download completed successfully', 'success');
     }
     
+    // Add to download history
+    addToDownloadHistory({
+        date: new Date().toISOString(),
+        symbols: downloadStats.total,
+        success: downloadStats.success,
+        failed: downloadStats.failed
+    });
+    
     // Reset UI
     downloadInProgress = false;
     document.getElementById('download-btn').disabled = false;
     document.getElementById('pause-btn').disabled = true;
+    
+    // Cancel button doesn't have an ID in the HTML, use querySelector instead
+    const cancelBtn = document.querySelector('button[onclick="cancelDownload()"]');
+    if (cancelBtn) {
+        cancelBtn.disabled = true;
+    }
 }
 
 function addSymbolProgress(symbol, status, error = null) {
@@ -297,7 +297,70 @@ function retryFailed() {
 function resetDownloadUI() {
     downloadInProgress = false;
     document.getElementById('download-btn').disabled = false;
+    document.getElementById('pause-btn').disabled = false;
+    
+    // Cancel button doesn't have an ID in the HTML, use querySelector instead
+    const cancelBtn = document.querySelector('button[onclick="cancelDownload()"]');
+    if (cancelBtn) {
+        cancelBtn.disabled = false;
+    }
+    
+    document.getElementById('retry-btn').disabled = true;
     document.getElementById('progress-section').classList.add('hidden');
+}
+
+function addToDownloadHistory(download) {
+    // Get download history container
+    const historyContainer = document.getElementById('download-history');
+    
+    // Clear "no downloads" message if present
+    if (historyContainer.textContent.includes('No recent downloads')) {
+        historyContainer.innerHTML = '';
+    }
+    
+    // Create a new history item
+    const item = document.createElement('div');
+    item.className = 'bg-gray-50 dark:bg-gray-700 p-3 rounded';
+    
+    // Format date for display
+    const date = new Date(download.date);
+    const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    
+    // Create status class based on success rate
+    let statusClass = 'text-success';
+    if (download.failed > 0 && download.success > 0) {
+        statusClass = 'text-warning';
+    } else if (download.failed > 0 && download.success === 0) {
+        statusClass = 'text-error';
+    }
+    
+    item.innerHTML = `
+        <div class="flex justify-between items-center">
+            <div>
+                <span class="text-sm font-medium">${formattedDate}</span>
+                <p class="text-xs text-gray-500 mt-1">Symbols: ${download.symbols}</p>
+            </div>
+            <div class="text-right">
+                <span class="${statusClass} font-medium">
+                    ${download.success}/${download.symbols} complete
+                </span>
+                ${download.failed > 0 ? 
+                    `<p class="text-xs text-error mt-1">${download.failed} failed</p>` : 
+                    ''}
+            </div>
+        </div>
+    `;
+    
+    // Add to the history container (at the top)
+    historyContainer.insertBefore(item, historyContainer.firstChild);
+    
+    // Store in local storage for persistence
+    saveDownloadHistory();
+}
+
+function saveDownloadHistory() {
+    // In a real implementation, this would save history to local storage or the server
+    // This is a placeholder function
 }
 
 function showToast(message, type = 'info') {

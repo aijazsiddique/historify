@@ -82,15 +82,15 @@ document.addEventListener('DOMContentLoaded', () => {
             borderColor: isDarkMode ? '#374151' : '#e5e7eb',
             timeVisible: true,
             secondsVisible: false,
-            // Format timestamps correctly
+            // Fix timezone display for IST market hours (UTC+5:30)
             localization: {
                 timeFormatter: (timestamp) => {
                     const date = new Date(timestamp * 1000);
-                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
                 },
                 dateFormatter: (timestamp) => {
                     const date = new Date(timestamp * 1000);
-                    return date.toLocaleDateString();
+                    return date.toLocaleDateString([], { timeZone: 'Asia/Kolkata' });
                 },
             },
         },
@@ -258,6 +258,43 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Process and display data
             if (data.candlestick && data.candlestick.length > 0) {
+                // Log first few entries for debugging
+                console.log('First few raw timestamps:');
+                for (let i = 0; i < Math.min(3, data.candlestick.length); i++) {
+                    console.log(`Candle ${i}: ${data.candlestick[i].time} => ${new Date(data.candlestick[i].time * 1000).toISOString()}`);
+                }
+                
+                // Fix for IST display issue - adjust timestamps for intraday data
+                if (['1m', '5m', '15m', '30m', '1h'].includes(apiInterval)) {
+                    console.log('Applying IST adjustment to intraday data');
+                    // Convert timestamps for correct IST display (add 5.5 hours)
+                    data.candlestick = data.candlestick.map(item => ({
+                        ...item,
+                        time: item.time + (5.5 * 60 * 60)  // Add 5.5 hours in seconds
+                    }));
+                    
+                    // Do the same for indicators if present
+                    if (data.ema && data.ema.length > 0) {
+                        data.ema = data.ema.map(item => ({
+                            ...item,
+                            time: item.time + (5.5 * 60 * 60)
+                        }));
+                    }
+                    
+                    if (data.rsi && data.rsi.length > 0) {
+                        data.rsi = data.rsi.map(item => ({
+                            ...item,
+                            time: item.time + (5.5 * 60 * 60)
+                        }));
+                    }
+                    
+                    // Log the first few adjusted timestamps
+                    console.log('First few adjusted timestamps:');
+                    for (let i = 0; i < Math.min(3, data.candlestick.length); i++) {
+                        console.log(`Adjusted candle ${i}: ${data.candlestick[i].time} => ${new Date(data.candlestick[i].time * 1000).toISOString()}`);
+                    }
+                }
+                
                 // Store chart data
                 chartData = data.candlestick;
                 
@@ -318,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Format candlestick data for TradingView
     function formatCandlestickData(data) {
         // For TradingView 5.0.0, we need to ensure the data uses Unix timestamps
-        // The backend should already be providing Unix timestamps, so we just verify the format
+        // The backend should already be providing Unix timestamps (UTC), so we just verify the format
         if (data && data.length > 0) {
             // Check if we need to convert from time objects to timestamps
             if (typeof data[0].time === 'object' && data[0].time !== null) {
@@ -326,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return data.map(item => ({
                     time: typeof item.time === 'number' ? item.time : 
                           Math.floor(new Date(item.time.year, item.time.month - 1, item.time.day, 
-                                            item.time.hour || 0, item.time.minute || 0).getTime() / 1000),
+                                             item.time.hour || 0, item.time.minute || 0).getTime() / 1000),
                     open: item.open,
                     high: item.high,
                     low: item.low,

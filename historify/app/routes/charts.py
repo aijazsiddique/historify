@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import logging
+import pytz
 
 charts_bp = Blueprint('charts', __name__)
 
@@ -186,13 +187,17 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
                         # For daily/weekly data, use the date string in YYYY-MM-DD format
                         time_obj = item.date.strftime('%Y-%m-%d')
                     else:
-                        # For intraday data without time, use start of day
-                        db_datetime = datetime.combine(item.date, datetime.min.time())
-                        time_obj = int(db_datetime.timestamp())
+                        # For intraday data without time, use start of day (00:00:00)
+                        db_datetime_naive = datetime.combine(item.date, datetime.min.time())
+                        ist_tz = pytz.timezone('Asia/Kolkata')
+                        ist_datetime_aware = ist_tz.localize(db_datetime_naive)
+                        time_obj = int(ist_datetime_aware.timestamp())  # Get UTC Unix timestamp
                 else:
                     # For intraday data with time
-                    db_datetime = datetime.combine(item.date, item.time)
-                    time_obj = int(db_datetime.timestamp())
+                    db_datetime_naive = datetime.combine(item.date, item.time)
+                    ist_tz = pytz.timezone('Asia/Kolkata')
+                    ist_datetime_aware = ist_tz.localize(db_datetime_naive)
+                    time_obj = int(ist_datetime_aware.timestamp())  # Get UTC Unix timestamp
                 
                 # Log some sample data for debugging
                 if len(ohlcv_data) < 3:  # Log first few items

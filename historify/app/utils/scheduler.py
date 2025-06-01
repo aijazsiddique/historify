@@ -164,14 +164,39 @@ class SchedulerManager:
                     # Get last checkpoint
                     checkpoint = Checkpoint.query.filter_by(symbol=symbol).first()
                     
-                    # Determine start date
-                    if checkpoint and checkpoint.last_downloaded_date:
-                        start_date = (checkpoint.last_downloaded_date + timedelta(days=1)).strftime('%Y-%m-%d')
-                    else:
-                        # Default to last 30 days if no checkpoint
-                        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-                    
+                    # Determine date range based on interval
                     end_date = datetime.now().strftime('%Y-%m-%d')
+                    
+                    # Intraday intervals need smaller date ranges
+                    is_intraday = interval in ['1m', '3m', '5m', '10m', '15m', '30m', '1h']
+                    
+                    if checkpoint and checkpoint.last_downloaded_date:
+                        if is_intraday:
+                            # For intraday data, we want to look at a smaller window
+                            # For very small intervals like 1m, even getting just the last few trading days might be enough
+                            days_to_lookback = 3 if interval == '1m' else 7
+                            # Calculate how many days have passed since last download
+                            days_since_checkpoint = (datetime.now().date() - checkpoint.last_downloaded_date).days
+                            # Use the smaller of the two values
+                            lookback_days = min(days_since_checkpoint, days_to_lookback)
+                            start_date = (datetime.now() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
+                            logging.info(f"Using intraday lookback period of {lookback_days} days for {interval} data")
+                        else:
+                            # For daily data, start from the day after the last download
+                            start_date = (checkpoint.last_downloaded_date + timedelta(days=1)).strftime('%Y-%m-%d')
+                    else:
+                        # Default lookback period if no checkpoint
+                        if is_intraday:
+                            # For 1m data, only look back a few days to avoid API limitations
+                            if interval == '1m':
+                                lookback_days = 3
+                            else:
+                                lookback_days = 7
+                            start_date = (datetime.now() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
+                            logging.info(f"Using default intraday lookback of {lookback_days} days for {interval} data")
+                        else:
+                            # Default to last 30 days for daily data
+                            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
                     
                     # Fetch data
                     historical_data = fetch_historical_data(symbol, start_date, end_date, interval=interval, exchange=exchange)

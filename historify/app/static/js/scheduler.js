@@ -17,21 +17,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadScheduledJobs() {
     try {
-        console.log('Loading scheduled jobs...');
+        // Loading scheduled jobs
         const response = await fetch('/api/scheduler/jobs');
-        console.log('Response status:', response.status);
+        // Processed response
         
         if (response.ok) {
             scheduledJobs = await response.json();
-            console.log('Loaded jobs:', scheduledJobs);
+            // Jobs loaded
             displayScheduledJobs();
         } else {
             const errorText = await response.text();
-            console.error('Failed to load jobs:', errorText);
+            // Failed to load jobs
             showToast('Failed to load scheduled jobs', 'error');
         }
     } catch (error) {
-        console.error('Error loading scheduled jobs:', error);
         showToast('Error loading scheduled jobs', 'error');
     }
 }
@@ -109,7 +108,7 @@ function displayScheduledJobs() {
 }
 
 function showAddJobModal() {
-    console.log("New showAddJobModal called");
+    // Show modal
     
     // Check if emergency modal already exists (prevent duplicates)
     if (document.getElementById('emergency-modal')) {
@@ -190,7 +189,7 @@ function showAddJobModal() {
 }
 
 function closeAddJobModal() {
-    console.log("New closeAddJobModal called");
+    // Close modal
     
     // Handle the emergency modal
     const emergencyModal = document.getElementById('emergency-modal');
@@ -267,7 +266,7 @@ function updateSymbolSelectionUI(isEmergencyModal = false) {
 
 // Handle submission from the emergency form
 function handleEmergencyFormSubmit() {
-    console.log("Emergency form submit handler");
+    // Handle emergency form submit
     const emergencyForm = document.getElementById('emergency-form');
     if (!emergencyForm) return;
     
@@ -304,7 +303,7 @@ async function handleAddJob(e, isEmergencyModal = false) {
     const dataIntervalEl = form.querySelector('#data-interval');
     
     if (!jobType || !symbolSelection || !dataIntervalEl) {
-        console.error('Required form elements not found');
+        // Required form elements not found
         showToast('Form error: missing elements', 'error');
         return;
     }
@@ -353,28 +352,27 @@ async function handleAddJob(e, isEmergencyModal = false) {
     }
     
     try {
-        console.log('Submitting job data:', jobData);
+        // Submitting job data
         const response = await fetch('/api/scheduler/jobs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(jobData)
         });
         
-        console.log('Response status:', response.status);
+        // Processed response
         
         if (response.ok) {
             const result = await response.json();
-            console.log('Job creation result:', result);
+            // Job created
             showToast('Job created successfully', 'success');
             closeAddJobModal();
             loadScheduledJobs();
         } else {
             const error = await response.json();
-            console.error('Job creation error:', error);
+            // Job creation error
             showToast(error.error || 'Failed to create job', 'error');
         }
     } catch (error) {
-        console.error('Error creating job:', error);
         showToast('Failed to create job', 'error');
     }
 }
@@ -386,27 +384,26 @@ async function addPresetJob(preset) {
     };
     
     try {
-        console.log('Adding preset job:', preset, jobData);
+        // Adding preset job
         const response = await fetch('/api/scheduler/jobs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(jobData)
         });
         
-        console.log('Preset job response status:', response.status);
+        // Process preset job response
         
         if (response.ok) {
             const result = await response.json();
-            console.log('Preset job result:', result);
+            // Preset job created
             showToast('Preset job added successfully', 'success');
             loadScheduledJobs();
         } else {
             const error = await response.json();
-            console.error('Preset job error:', error);
+            // Preset job error
             showToast(error.error || 'Failed to add preset job', 'error');
         }
     } catch (error) {
-        console.error('Error adding preset job:', error);
         showToast('Failed to add preset job', 'error');
     }
 }
@@ -423,7 +420,6 @@ async function runJobNow(jobId) {
             showToast('Failed to run job', 'error');
         }
     } catch (error) {
-        console.error('Error running job:', error);
         showToast('Failed to run job', 'error');
     }
 }
@@ -441,7 +437,6 @@ async function pauseJob(jobId) {
             showToast('Failed to pause job', 'error');
         }
     } catch (error) {
-        console.error('Error pausing job:', error);
         showToast('Failed to pause job', 'error');
     }
 }
@@ -459,15 +454,68 @@ async function resumeJob(jobId) {
             showToast('Failed to resume job', 'error');
         }
     } catch (error) {
-        console.error('Error resuming job:', error);
         showToast('Failed to resume job', 'error');
     }
 }
 
+// Display confirm modal when deleting a job
 async function deleteJob(jobId) {
-    if (!confirm('Are you sure you want to delete this job?')) {
-        return;
+    // Show the confirmation modal instead of using confirm()
+    showDeleteConfirmModal(jobId);
+    return;
+}
+
+// Show confirm delete modal
+function showDeleteConfirmModal(jobId) {
+    // Check if confirm modal already exists
+    if (document.getElementById('confirm-delete-modal')) {
+        document.getElementById('confirm-delete-modal').remove();
     }
+    
+    // Create a modal for delete confirmation
+    const confirmModal = document.createElement('div');
+    confirmModal.id = 'confirm-delete-modal';
+    
+    // Apply styles
+    confirmModal.style.position = 'fixed';
+    confirmModal.style.top = '0';
+    confirmModal.style.left = '0';
+    confirmModal.style.right = '0';
+    confirmModal.style.bottom = '0';
+    confirmModal.style.display = 'flex';
+    confirmModal.style.alignItems = 'center';
+    confirmModal.style.justifyContent = 'center';
+    confirmModal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    confirmModal.style.zIndex = '99999';
+    
+    const modalHTML = `
+        <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 20px;">Confirm Delete</h3>
+            </div>
+            <p>Are you sure you want to delete this job? This action cannot be undone.</p>
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px;">
+                <button type="button" onclick="closeDeleteConfirmModal()" class="btn-modern btn-secondary">Cancel</button>
+                <button type="button" onclick="confirmDeleteJob('${jobId}')" class="btn-modern btn-primary btn-error">Delete</button>
+            </div>
+        </div>
+    `;
+    
+    confirmModal.innerHTML = modalHTML;
+    document.body.appendChild(confirmModal);
+}
+
+// Close delete confirmation modal
+function closeDeleteConfirmModal() {
+    const confirmModal = document.getElementById('confirm-delete-modal');
+    if (confirmModal) {
+        confirmModal.remove();
+    }
+}
+
+// Handle confirmed job deletion
+async function confirmDeleteJob(jobId) {
+    closeDeleteConfirmModal();
     
     try {
         const response = await fetch(`/api/scheduler/jobs/${jobId}`, {
@@ -481,7 +529,6 @@ async function deleteJob(jobId) {
             showToast('Failed to delete job', 'error');
         }
     } catch (error) {
-        console.error('Error deleting job:', error);
         showToast('Failed to delete job', 'error');
     }
 }
@@ -500,7 +547,7 @@ async function testScheduler() {
             showToast('Failed to create test job', 'error');
         }
     } catch (error) {
-        console.error('Error testing scheduler:', error);
+        // Error already handled by toast
         showToast('Failed to create test job', 'error');
     }
 }

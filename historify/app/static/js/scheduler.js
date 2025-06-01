@@ -109,83 +109,247 @@ function displayScheduledJobs() {
 }
 
 function showAddJobModal() {
-    const modal = document.getElementById('add-job-modal');
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.querySelector('.modal-backdrop').classList.add('show');
-        modal.querySelector('.modal-content').classList.add('show');
-    }, 10);
+    console.log("New showAddJobModal called");
+    
+    // Check if emergency modal already exists (prevent duplicates)
+    if (document.getElementById('emergency-modal')) {
+        document.getElementById('emergency-modal').style.display = 'flex';
+        return;
+    }
+    
+    // Create a direct, emergency modal that bypasses the existing modal system
+    const emergencyModal = document.createElement('div');
+    emergencyModal.id = 'emergency-modal';
+    
+    // Apply direct inline styles for maximum override
+    emergencyModal.style.position = 'fixed';
+    emergencyModal.style.top = '0';
+    emergencyModal.style.left = '0';
+    emergencyModal.style.right = '0';
+    emergencyModal.style.bottom = '0';
+    emergencyModal.style.display = 'flex';
+    emergencyModal.style.alignItems = 'center';
+    emergencyModal.style.justifyContent = 'center';
+    emergencyModal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    emergencyModal.style.zIndex = '99999';
+    
+    // Create modal content
+    const form = document.getElementById('add-job-form');
+    const originalModal = document.getElementById('add-job-modal');
+    
+    if (originalModal && form) {
+        // Copy the form from the original modal
+        const modalHTML = `
+            <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 20px;">Add Scheduled Job</h3>
+                    <button onclick="closeAddJobModal()" style="background: none; border: none; cursor: pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="emergency-form-container"></div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px;">
+                    <button type="button" onclick="closeAddJobModal()" class="btn-modern btn-secondary">Cancel</button>
+                    <button type="button" onclick="handleEmergencyFormSubmit()" class="btn-modern btn-primary">Add Job</button>
+                </div>
+            </div>
+        `;
+        
+        emergencyModal.innerHTML = modalHTML;
+        document.body.appendChild(emergencyModal);
+        
+        // Clone the form and insert it into our emergency modal
+        const formClone = form.cloneNode(true);
+        formClone.id = "emergency-form";
+        document.getElementById('emergency-form-container').appendChild(formClone);
+        
+        // Set up event listeners for the form
+        formClone.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleAddJob(e, true);
+        });
+        
+        // Set up radio button handlers
+        formClone.querySelectorAll('input[name="job_type"]').forEach(radio => {
+            radio.addEventListener('change', () => updateJobTypeUI(true));
+        });
+        
+        formClone.querySelectorAll('input[name="symbol_selection"]').forEach(radio => {
+            radio.addEventListener('change', () => updateSymbolSelectionUI(true));
+        });
+    } else {
+        emergencyModal.innerHTML = `
+            <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                <h3>Error: Could not find form elements</h3>
+                <p>There was an error loading the form. Please refresh the page and try again.</p>
+                <button onclick="closeAddJobModal()" style="background-color: #f44336; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 15px;">Close</button>
+            </div>
+        `;
+        document.body.appendChild(emergencyModal);
+    }
 }
 
 function closeAddJobModal() {
-    const modal = document.getElementById('add-job-modal');
-    modal.querySelector('.modal-backdrop').classList.remove('show');
-    modal.querySelector('.modal-content').classList.remove('show');
+    console.log("New closeAddJobModal called");
     
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        document.getElementById('add-job-form').reset();
-    }, 300);
-}
-
-function updateJobTypeUI() {
-    const jobType = document.querySelector('input[name="job_type"]:checked').value;
-    const dailySettings = document.getElementById('daily-settings');
-    const intervalSettings = document.getElementById('interval-settings');
-    
-    if (jobType === 'daily') {
-        dailySettings.classList.remove('hidden');
-        intervalSettings.classList.add('hidden');
-        document.getElementById('job-time').required = true;
-        document.getElementById('job-interval').required = false;
-    } else {
-        dailySettings.classList.add('hidden');
-        intervalSettings.classList.remove('hidden');
-        document.getElementById('job-time').required = false;
-        document.getElementById('job-interval').required = true;
-    }
-}
-
-function updateSymbolSelectionUI() {
-    const selection = document.querySelector('input[name="symbol_selection"]:checked').value;
-    const customSymbols = document.getElementById('custom-symbols');
-    
-    if (selection === 'custom') {
-        customSymbols.classList.remove('hidden');
-    } else {
-        customSymbols.classList.add('hidden');
-    }
-}
-
-async function handleAddJob(e) {
-    e.preventDefault();
-    
-    const jobType = document.querySelector('input[name="job_type"]:checked').value;
-    const symbolSelection = document.querySelector('input[name="symbol_selection"]:checked').value;
-    
-    const jobData = {
-        type: jobType,
-        interval: document.getElementById('data-interval').value
-    };
-    
-    if (jobType === 'daily') {
-        jobData.time = document.getElementById('job-time').value;
-    } else {
-        jobData.minutes = parseInt(document.getElementById('job-interval').value);
-    }
-    
-    if (symbolSelection === 'custom') {
-        const symbolsText = document.getElementById('symbols-list').value.trim();
-        if (symbolsText) {
-            const symbols = symbolsText.split(',').map(s => s.trim());
-            jobData.symbols = symbols.map(symbol => ({ symbol: symbol, exchange: 'NSE' }));
-            jobData.exchanges = symbols.map(() => 'NSE');
+    // Handle the emergency modal
+    const emergencyModal = document.getElementById('emergency-modal');
+    if (emergencyModal) {
+        emergencyModal.style.display = 'none';
+        const emergencyForm = document.getElementById('emergency-form');
+        if (emergencyForm) {
+            emergencyForm.reset();
         }
     }
     
-    const jobName = document.getElementById('job-name').value.trim();
-    if (jobName) {
-        jobData.job_id = jobName.toLowerCase().replace(/\s+/g, '_');
+    // Also handle the original modal just in case
+    const originalModal = document.getElementById('add-job-modal');
+    if (originalModal) {
+        originalModal.classList.add('hidden');
+        const originalForm = document.getElementById('add-job-form');
+        if (originalForm) {
+            originalForm.reset();
+        }
+    }
+}
+
+function updateJobTypeUI(isEmergencyModal = false) {
+    const prefix = isEmergencyModal ? 'emergency-form-container' : '';
+    const form = isEmergencyModal ? document.getElementById('emergency-form') : document;
+    
+    if (!form) return;
+    
+    const jobType = form.querySelector('input[name="job_type"]:checked')?.value;
+    if (!jobType) return;
+    
+    const dailySettings = form.querySelectorAll('.daily-settings');
+    const intervalSettings = form.querySelectorAll('.interval-settings');
+    
+    if (jobType === 'daily') {
+        dailySettings.forEach(el => el.classList.remove('hidden'));
+        intervalSettings.forEach(el => el.classList.add('hidden'));
+        
+        // Make time input required for daily jobs
+        const timeInput = form.querySelector('#job-time');
+        if (timeInput) timeInput.required = true;
+        
+        const intervalInput = form.querySelector('#job-interval');
+        if (intervalInput) intervalInput.required = false;
+    } else {
+        dailySettings.forEach(el => el.classList.add('hidden'));
+        intervalSettings.forEach(el => el.classList.remove('hidden'));
+        
+        // Make interval input required for interval jobs
+        const timeInput = form.querySelector('#job-time');
+        if (timeInput) timeInput.required = false;
+        
+        const intervalInput = form.querySelector('#job-interval');
+        if (intervalInput) intervalInput.required = true;
+    }
+}
+
+function updateSymbolSelectionUI(isEmergencyModal = false) {
+    const form = isEmergencyModal ? document.getElementById('emergency-form') : document;
+    
+    if (!form) return;
+    
+    const selection = form.querySelector('input[name="symbol_selection"]:checked')?.value;
+    if (!selection) return;
+    
+    const customSymbols = form.querySelectorAll('.custom-symbols');
+    
+    if (selection === 'custom') {
+        customSymbols.forEach(el => el.classList.remove('hidden'));
+    } else {
+        customSymbols.forEach(el => el.classList.add('hidden'));
+    }
+}
+
+// Handle submission from the emergency form
+function handleEmergencyFormSubmit() {
+    console.log("Emergency form submit handler");
+    const emergencyForm = document.getElementById('emergency-form');
+    if (!emergencyForm) return;
+    
+    // Validate form manually
+    const jobType = emergencyForm.querySelector('input[name="job_type"]:checked')?.value;
+    
+    if (jobType === 'daily') {
+        const timeInput = emergencyForm.querySelector('#job-time');
+        if (!timeInput || !timeInput.value) {
+            showToast('Time is required for daily jobs', 'error');
+            return;
+        }
+    } else if (jobType === 'interval') {
+        const intervalInput = emergencyForm.querySelector('#job-interval');
+        if (!intervalInput || !intervalInput.value) {
+            showToast('Interval is required for interval jobs', 'error');
+            return;
+        }
+    }
+    
+    // Create a synthetic event and pass it to handleAddJob
+    const event = { preventDefault: () => {} };
+    handleAddJob(event, true);
+}
+
+async function handleAddJob(e, isEmergencyModal = false) {
+    e.preventDefault();
+    
+    const form = isEmergencyModal ? document.getElementById('emergency-form') : document;
+    if (!form) return;
+    
+    const jobType = form.querySelector('input[name="job_type"]:checked')?.value;
+    const symbolSelection = form.querySelector('input[name="symbol_selection"]:checked')?.value;
+    const dataIntervalEl = form.querySelector('#data-interval');
+    
+    if (!jobType || !symbolSelection || !dataIntervalEl) {
+        console.error('Required form elements not found');
+        showToast('Form error: missing elements', 'error');
+        return;
+    }
+    
+    const jobData = {
+        type: jobType,
+        interval: dataIntervalEl.value
+    };
+    
+    if (jobType === 'daily') {
+        const jobTimeEl = form.querySelector('#job-time');
+        if (jobTimeEl && jobTimeEl.value) {
+            jobData.time = jobTimeEl.value;
+        } else {
+            showToast('Time is required for daily jobs', 'error');
+            return;
+        }
+    } else {
+        const jobIntervalEl = form.querySelector('#job-interval');
+        if (jobIntervalEl && jobIntervalEl.value) {
+            jobData.minutes = parseInt(jobIntervalEl.value);
+        } else {
+            showToast('Interval value is required', 'error');
+            return;
+        }
+    }
+    
+    if (symbolSelection === 'custom') {
+        const symbolsListEl = form.querySelector('#symbols-list');
+        if (symbolsListEl) {
+            const symbolsText = symbolsListEl.value.trim();
+            if (symbolsText) {
+                const symbols = symbolsText.split(',').map(s => s.trim());
+                jobData.symbols = symbols.map(symbol => ({ symbol: symbol, exchange: 'NSE' }));
+                jobData.exchanges = symbols.map(() => 'NSE');
+            }
+        }
+    }
+    
+    const jobNameEl = form.querySelector('#job-name');
+    if (jobNameEl) {
+        const jobName = jobNameEl.value.trim();
+        if (jobName) {
+            jobData.job_id = jobName.toLowerCase().replace(/\s+/g, '_');
+        }
     }
     
     try {

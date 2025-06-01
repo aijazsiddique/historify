@@ -52,6 +52,16 @@
   --border-secondary: #D1D5DB;
   --border-focus: #6366F1;
   
+  /* Z-index Scale */
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-banner: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-toast: 80;
+  
   /* Shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);

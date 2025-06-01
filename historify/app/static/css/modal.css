@@ -1,0 +1,110 @@
+/**
+ * Modal styles for Historify
+ */
+
+/* Modal container */
+.modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important; /* Use explicit high z-index */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+  transition: all 0.3s ease !important;
+  background-color: rgba(0, 0, 0, 0.1) !important; /* Subtle background to see if it's rendering */
+}
+
+.modal.hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  display: none !important; /* Explicit display none when hidden */
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  opacity: 0 !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.modal-backdrop.show {
+  opacity: 1 !important;
+}
+
+/* Modal content */
+.modal-content {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 600px !important; /* Force a reasonable width */
+  background-color: white !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important; /* Explicit shadow */
+  margin: 1.5rem !important;
+  opacity: 0 !important;
+  transform: translateY(20px) !important;
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
+  padding: 1.5rem !important; /* Add some padding for visibility */
+  border: 2px solid #007bff !important; /* Visible border for debugging */
+  z-index: 1 !important;
+}
+
+.modal-content.show {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Dark mode styles */
+[data-theme="dark"] .modal-content {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Modal parts */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.modal-body {
+  padding: 1.25rem;
+  max-height: calc(100vh - 15rem);
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  .modal-content {
+    margin: 0 2rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .modal-content {
+    margin: 0 1rem;
+    max-height: 90vh;
+  }
+  
+  .modal-body {
+    max-height: calc(90vh - 10rem);
+  }
+}

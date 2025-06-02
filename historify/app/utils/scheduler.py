@@ -259,7 +259,12 @@ class SchedulerManager:
                             logging.info(f"Using intraday lookback period of {lookback_days} days for {interval} data")
                         else:
                             # For daily data, start from the day after the last download
-                            start_date = (checkpoint.last_downloaded_date + timedelta(days=1)).strftime('%Y-%m-%d')
+                            # Check if the last downloaded date is today or in the future
+                            proposed_start = checkpoint.last_downloaded_date + timedelta(days=1)
+                            if proposed_start > datetime.now().date():
+                                logging.info(f"Data for {symbol} is already up to date")
+                                continue  # Skip this symbol as it's already up to date
+                            start_date = proposed_start.strftime('%Y-%m-%d')
                     else:
                         # Default lookback period if no checkpoint
                         if is_intraday:
@@ -274,8 +279,25 @@ class SchedulerManager:
                             # Default to last 30 days for daily data
                             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
                     
+                    # Validate dates before fetching
+                    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    
+                    if start_date_obj > end_date_obj:
+                        logging.warning(f"Skipping {symbol}: start date {start_date} is after end date {end_date}")
+                        continue
+                    
+                    if start_date_obj == end_date_obj and not is_intraday:
+                        logging.info(f"Skipping {symbol}: no new data to fetch for daily interval")
+                        continue
+                    
                     # Fetch data
-                    historical_data = fetch_historical_data(symbol, start_date, end_date, interval=interval, exchange=exchange)
+                    try:
+                        historical_data = fetch_historical_data(symbol, start_date, end_date, interval=interval, exchange=exchange)
+                    except Exception as fetch_error:
+                        logging.error(f"Error fetching data for {symbol}: {str(fetch_error)}")
+                        failed_count += 1
+                        continue
                     
                     if historical_data:
                         # Import the necessary models

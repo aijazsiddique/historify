@@ -5,14 +5,16 @@
 let scheduledJobs = [];
 
 // Initialize
+let autoRefreshInterval = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     loadScheduledJobs();
     
     // Set up form submission
     document.getElementById('add-job-form').addEventListener('submit', handleAddJob);
     
-    // Auto-refresh jobs every 30 seconds
-    setInterval(loadScheduledJobs, 30000);
+    // Set up dynamic auto-refresh
+    setupAutoRefresh();
 });
 
 async function loadScheduledJobs() {
@@ -25,6 +27,8 @@ async function loadScheduledJobs() {
             scheduledJobs = await response.json();
             // Jobs loaded
             displayScheduledJobs();
+            // Update auto-refresh based on job intervals
+            setupAutoRefresh();
         } else {
             const errorText = await response.text();
             // Failed to load jobs
@@ -33,6 +37,32 @@ async function loadScheduledJobs() {
     } catch (error) {
         showToast('Error loading scheduled jobs', 'error');
     }
+}
+
+function setupAutoRefresh() {
+    // Clear existing interval
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    
+    // Find the shortest interval among active jobs
+    let shortestInterval = 30000; // Default to 30 seconds
+    
+    scheduledJobs.forEach(job => {
+        if (!job.paused && job.type === 'interval' && job.minutes) {
+            // Convert minutes to milliseconds, but cap at minimum 10 seconds for performance
+            const intervalMs = Math.max(job.minutes * 60 * 1000 / 2, 10000);
+            shortestInterval = Math.min(shortestInterval, intervalMs);
+        }
+    });
+    
+    // For 1-minute jobs, refresh every 10 seconds to ensure accurate next run display
+    if (scheduledJobs.some(job => !job.paused && job.type === 'interval' && job.minutes === 1)) {
+        shortestInterval = 10000; // 10 seconds
+    }
+    
+    // Set up the new interval
+    autoRefreshInterval = setInterval(loadScheduledJobs, shortestInterval);
 }
 
 function displayScheduledJobs() {

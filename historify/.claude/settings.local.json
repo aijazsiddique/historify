@@ -10,7 +10,8 @@
       "Bash(venv/Scripts/python.exe:*)",
       "Bash(curl:*)",
       "Bash(pkill:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebFetch(domain:www.gnu.org)"
     ],
     "deny": []
   }

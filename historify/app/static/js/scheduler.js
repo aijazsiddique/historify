@@ -6,6 +6,7 @@ let scheduledJobs = [];
 
 // Initialize
 let autoRefreshInterval = null;
+let nextRunUpdateInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadScheduledJobs();
@@ -15,6 +16,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up dynamic auto-refresh
     setupAutoRefresh();
+    
+    // Update next run times every second for real-time display
+    startNextRunUpdater();
 });
 
 async function loadScheduledJobs() {
@@ -84,6 +88,12 @@ function displayScheduledJobs() {
     scheduledJobs.forEach(job => {
         const jobElement = document.createElement('div');
         jobElement.className = 'flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg';
+        jobElement.setAttribute('data-job-id', job.id);
+        jobElement.setAttribute('data-job-type', job.type);
+        jobElement.setAttribute('data-job-minutes', job.minutes || '');
+        jobElement.setAttribute('data-job-time', job.time || '');
+        jobElement.setAttribute('data-job-paused', job.paused ? 'true' : 'false');
+        jobElement.setAttribute('data-next-run', job.next_run || '');
         
         const typeIcon = job.type === 'daily' ? 'fa-calendar-day' : 'fa-sync';
         const statusClass = job.paused ? 'text-warning' : 'text-success';
@@ -106,9 +116,9 @@ function displayScheduledJobs() {
                     <p class="text-sm text-gray-600 dark:text-gray-400">
                         ${scheduleText} • ${job.interval} data
                     </p>
-                    ${job.next_run ? `
-                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            Next run: ${formatDateTime(job.next_run)}
+                    ${job.next_run && !job.paused ? `
+                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-1 next-run-time">
+                            Next run: <span class="next-run-value">${formatDateTime(job.next_run)}</span>
                         </p>
                     ` : ''}
                 </div>
@@ -137,6 +147,9 @@ function displayScheduledJobs() {
         
         container.appendChild(jobElement);
     });
+    
+    // Restart the next run updater after displaying jobs
+    startNextRunUpdater();
 }
 
 function showAddJobModal() {
@@ -590,4 +603,63 @@ function showToast(message, type = 'info') {
     setTimeout(() => {
         toast.remove();
     }, 5000);
+}
+
+// Start the next run time updater
+function startNextRunUpdater() {
+    if (nextRunUpdateInterval) {
+        clearInterval(nextRunUpdateInterval);
+    }
+    
+    // Update every second
+    nextRunUpdateInterval = setInterval(updateNextRunTimes, 1000);
+}
+
+// Update all next run times on the page
+function updateNextRunTimes() {
+    const jobElements = document.querySelectorAll('[data-job-id]');
+    
+    jobElements.forEach(element => {
+        const jobType = element.getAttribute('data-job-type');
+        const isPaused = element.getAttribute('data-job-paused') === 'true';
+        const nextRunElement = element.querySelector('.next-run-value');
+        
+        if (!nextRunElement || isPaused) return;
+        
+        if (jobType === 'interval') {
+            const minutes = parseInt(element.getAttribute('data-job-minutes'));
+            const lastRun = element.getAttribute('data-next-run');
+            
+            if (minutes && lastRun) {
+                // Calculate next run based on current time
+                const nextRun = calculateNextIntervalRun(lastRun, minutes);
+                nextRunElement.textContent = formatDateTime(nextRun);
+            }
+        } else if (jobType === 'daily') {
+            const time = element.getAttribute('data-job-time');
+            const originalNextRun = element.getAttribute('data-next-run');
+            
+            if (time && originalNextRun) {
+                // For daily jobs, the next run time doesn't change until it runs
+                // Just update the relative time display if needed
+                nextRunElement.textContent = formatDateTime(originalNextRun);
+            }
+        }
+    });
+}
+
+// Calculate next run time for interval jobs
+function calculateNextIntervalRun(lastRunStr, intervalMinutes) {
+    const lastRun = new Date(lastRunStr);
+    const now = new Date();
+    
+    // Calculate how many intervals have passed
+    const timeDiff = now - lastRun;
+    const intervalMs = intervalMinutes * 60 * 1000;
+    const intervalsPassed = Math.floor(timeDiff / intervalMs);
+    
+    // Calculate next run time
+    const nextRun = new Date(lastRun.getTime() + (intervalsPassed + 1) * intervalMs);
+    
+    return nextRun.toISOString();
 }

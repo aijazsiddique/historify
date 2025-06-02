@@ -12,3 +12,4 @@ from app.models.stock_data import StockData
 from app.models.watchlist import WatchlistItem
 from app.models.checkpoint import Checkpoint
 from app.models.settings import AppSettings
+from app.models.scheduler_job import SchedulerJob

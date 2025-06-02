@@ -12,6 +12,7 @@ import json
 from app.models import db
 from app.models.watchlist import WatchlistItem
 from app.models.checkpoint import Checkpoint
+from app.models.scheduler_job import SchedulerJob
 from app.utils.data_fetcher import fetch_historical_data
 
 # Global scheduler instance
@@ -33,10 +34,15 @@ class SchedulerManager:
                 logging.info("Scheduler started with IST timezone")
             else:
                 logging.info("Scheduler already running")
+            
+            # Load persisted jobs from database
+            with app.app_context():
+                self._load_persisted_jobs()
+                
         except Exception as e:
             logging.error(f"Failed to start scheduler: {str(e)}")
         
-    def add_daily_download_job(self, time_str, symbols=None, exchanges=None, interval='D', job_id=None):
+    def add_daily_download_job(self, time_str, symbols=None, exchanges=None, interval='D', job_id=None, persist=True):
         """
         Add a daily download job at specified IST time
         
@@ -73,17 +79,35 @@ class SchedulerManager:
                 'symbols': symbols,
                 'exchanges': exchanges,
                 'interval': interval,
-                'next_run': job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z') if job.next_run_time else None
+                'next_run': job.next_run_time.isoformat() if job.next_run_time else None
             }
             
             logging.info(f"Added daily download job at {time_str} IST")
+            
+            # Save job to database if persist is True
+            if persist:
+                scheduler_job = SchedulerJob.query.get(job_id)
+                if not scheduler_job:
+                    scheduler_job = SchedulerJob(id=job_id)
+                
+                scheduler_job.name = f"Daily Download at {time_str} IST"
+                scheduler_job.job_type = 'daily'
+                scheduler_job.time = time_str
+                scheduler_job.set_symbols(symbols)
+                scheduler_job.set_exchanges(exchanges)
+                scheduler_job.interval = interval
+                scheduler_job.is_paused = False
+                
+                db.session.add(scheduler_job)
+                db.session.commit()
+            
             return job_id
             
         except Exception as e:
             logging.error(f"Error adding daily download job: {str(e)}")
             raise
     
-    def add_interval_download_job(self, minutes, symbols=None, exchanges=None, interval='D', job_id=None):
+    def add_interval_download_job(self, minutes, symbols=None, exchanges=None, interval='D', job_id=None, persist=True):
         """
         Add a recurring download job that runs every N minutes
         
@@ -118,10 +142,28 @@ class SchedulerManager:
                 'symbols': symbols,
                 'exchanges': exchanges,
                 'interval': interval,
-                'next_run': job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z') if job.next_run_time else None
+                'next_run': job.next_run_time.isoformat() if job.next_run_time else None
             }
             
             logging.info(f"Added interval download job every {minutes} minutes")
+            
+            # Save job to database if persist is True
+            if persist:
+                scheduler_job = SchedulerJob.query.get(job_id)
+                if not scheduler_job:
+                    scheduler_job = SchedulerJob(id=job_id)
+                
+                scheduler_job.name = f"Download every {minutes} minutes"
+                scheduler_job.job_type = 'interval'
+                scheduler_job.minutes = minutes
+                scheduler_job.set_symbols(symbols)
+                scheduler_job.set_exchanges(exchanges)
+                scheduler_job.interval = interval
+                scheduler_job.is_paused = False
+                
+                db.session.add(scheduler_job)
+                db.session.commit()
+            
             return job_id
             
         except Exception as e:
@@ -132,13 +174,47 @@ class SchedulerManager:
         """
         Add a job that runs after market close (3:35 PM IST for NSE)
         """
-        return self.add_daily_download_job("15:35", job_id=job_id or "market_close_download")
+        job_id = job_id or "market_close_download"
+        result = self.add_daily_download_job("15:35", job_id=job_id, persist=False)
+        
+        # Save to database with proper job_type
+        scheduler_job = SchedulerJob.query.get(job_id)
+        if not scheduler_job:
+            scheduler_job = SchedulerJob(id=job_id)
+        
+        scheduler_job.name = "Market Close Download"
+        scheduler_job.job_type = 'market_close'
+        scheduler_job.time = "15:35"
+        scheduler_job.interval = 'D'
+        scheduler_job.is_paused = False
+        
+        db.session.add(scheduler_job)
+        db.session.commit()
+        
+        return result
     
     def add_pre_market_job(self, job_id=None):
         """
         Add a job that runs before market open (8:30 AM IST)
         """
-        return self.add_daily_download_job("08:30", job_id=job_id or "pre_market_download")
+        job_id = job_id or "pre_market_download"
+        result = self.add_daily_download_job("08:30", job_id=job_id, persist=False)
+        
+        # Save to database with proper job_type
+        scheduler_job = SchedulerJob.query.get(job_id)
+        if not scheduler_job:
+            scheduler_job = SchedulerJob(id=job_id)
+        
+        scheduler_job.name = "Pre-Market Download"
+        scheduler_job.job_type = 'pre_market'
+        scheduler_job.time = "08:30"
+        scheduler_job.interval = 'D'
+        scheduler_job.is_paused = False
+        
+        db.session.add(scheduler_job)
+        db.session.commit()
+        
+        return result
     
     def _execute_download(self, symbols=None, exchanges=None, interval='D'):
         """Execute the actual download process"""
@@ -263,6 +339,13 @@ class SchedulerManager:
             self.scheduler.remove_job(job_id)
             if job_id in self.jobs:
                 del self.jobs[job_id]
+            
+            # Remove from database
+            scheduler_job = SchedulerJob.query.get(job_id)
+            if scheduler_job:
+                db.session.delete(scheduler_job)
+                db.session.commit()
+            
             logging.info(f"Removed job: {job_id}")
             return True
         except Exception as e:
@@ -275,6 +358,13 @@ class SchedulerManager:
             self.scheduler.pause_job(job_id)
             if job_id in self.jobs:
                 self.jobs[job_id]['paused'] = True
+            
+            # Update in database
+            scheduler_job = SchedulerJob.query.get(job_id)
+            if scheduler_job:
+                scheduler_job.is_paused = True
+                db.session.commit()
+            
             logging.info(f"Paused job: {job_id}")
             return True
         except Exception as e:
@@ -287,6 +377,13 @@ class SchedulerManager:
             self.scheduler.resume_job(job_id)
             if job_id in self.jobs:
                 self.jobs[job_id]['paused'] = False
+            
+            # Update in database
+            scheduler_job = SchedulerJob.query.get(job_id)
+            if scheduler_job:
+                scheduler_job.is_paused = False
+                db.session.commit()
+            
             logging.info(f"Resumed job: {job_id}")
             return True
         except Exception as e:
@@ -302,7 +399,7 @@ class SchedulerManager:
                     job_info = {
                         'id': job.id,
                         'name': job.name,
-                        'next_run': job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z') if job.next_run_time else None,
+                        'next_run': job.next_run_time.isoformat() if job.next_run_time else None,
                         'paused': job.next_run_time is None
                     }
                     
@@ -329,6 +426,51 @@ class SchedulerManager:
         if self.scheduler.running:
             self.scheduler.shutdown()
             logging.info("Scheduler shut down")
+
+    def _load_persisted_jobs(self):
+        """Load persisted jobs from database on startup"""
+        try:
+            logging.info("Loading persisted scheduler jobs from database")
+            jobs = SchedulerJob.query.all()
+            
+            for job in jobs:
+                try:
+                    if job.job_type == 'daily':
+                        self.add_daily_download_job(
+                            time_str=job.time,
+                            symbols=job.get_symbols(),
+                            exchanges=job.get_exchanges(),
+                            interval=job.interval,
+                            job_id=job.id,
+                            persist=False  # Don't re-save to database
+                        )
+                    elif job.job_type == 'interval':
+                        self.add_interval_download_job(
+                            minutes=job.minutes,
+                            symbols=job.get_symbols(),
+                            exchanges=job.get_exchanges(),
+                            interval=job.interval,
+                            job_id=job.id,
+                            persist=False  # Don't re-save to database
+                        )
+                    elif job.job_type == 'market_close':
+                        self.add_market_close_job(job_id=job.id)
+                    elif job.job_type == 'pre_market':
+                        self.add_pre_market_job(job_id=job.id)
+                    
+                    # If job was paused, pause it again
+                    if job.is_paused:
+                        self.pause_job(job.id)
+                    
+                    logging.info(f"Loaded persisted job: {job.id}")
+                    
+                except Exception as e:
+                    logging.error(f"Error loading persisted job {job.id}: {str(e)}")
+                    
+            logging.info(f"Loaded {len(jobs)} persisted jobs")
+            
+        except Exception as e:
+            logging.error(f"Error loading persisted jobs: {str(e)}")
 
 # Create global scheduler instance
 scheduler_manager = SchedulerManager()

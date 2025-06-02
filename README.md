@@ -58,7 +58,7 @@ Historify is a professional-grade web application for downloading, managing, and
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/marketcalls/historify.git
-   cd historify
+   cd historify/historify
    ```
 
 2. **Create virtual environment**:

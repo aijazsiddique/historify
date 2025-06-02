@@ -242,6 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show loading state
             showLoading(true);
             
+            // Save current visible range before updating data
+            let savedVisibleRange = null;
+            if (mainChart && mainChart.timeScale()) {
+                savedVisibleRange = mainChart.timeScale().getVisibleRange();
+            }
+            
             // Use the interval value directly - no mapping needed
             // The database stores intervals as they are (D, W, 1m, 5m, etc.)
             let apiInterval = timeframeSelector.value;
@@ -327,13 +333,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('rsi-indicator').style.display = 'none';
                 }
                 
-                // Fit content
-                if (mainChart) {
-                    mainChart.timeScale().fitContent();
-                }
-                
-                if (rsiChart) {
-                    rsiChart.timeScale().fitContent();
+                // Restore zoom level or fit content if this is the first load
+                if (savedVisibleRange && mainChart) {
+                    // Restore the saved visible range
+                    mainChart.timeScale().setVisibleRange(savedVisibleRange);
+                    if (rsiChart) {
+                        rsiChart.timeScale().setVisibleRange(savedVisibleRange);
+                    }
+                } else {
+                    // First load - fit content
+                    if (mainChart) {
+                        mainChart.timeScale().fitContent();
+                    }
+                    
+                    if (rsiChart) {
+                        rsiChart.timeScale().fitContent();
+                    }
                 }
                 
                 // Update data summary

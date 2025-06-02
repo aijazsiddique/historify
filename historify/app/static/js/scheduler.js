@@ -83,8 +83,10 @@ function displayScheduledJobs() {
                     ` : ''}
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <i class="fas ${statusIcon} ${statusClass}"></i>
+            <div class="flex items-center gap-3">
+                <span class="px-3 py-1 text-sm font-medium rounded-full ${job.paused ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}">
+                    ${job.paused ? 'Paused' : 'Active'}
+                </span>
                 <button onclick="runJobNow('${job.id}')" class="btn-icon" title="Run now">
                     <i class="fas fa-play"></i>
                 </button>
@@ -139,17 +141,20 @@ function showAddJobModal() {
     if (originalModal && form) {
         // Copy the form from the original modal
         const modalHTML = `
-            <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                    <h3 style="margin: 0; font-size: 20px;">Add Scheduled Job</h3>
-                    <button onclick="closeAddJobModal()" style="background: none; border: none; cursor: pointer;">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-md w-full shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Add Scheduled Job</h3>
+                    <button onclick="closeAddJobModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div id="emergency-form-container"></div>
-                <div style="display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px;">
+                <div class="flex justify-end gap-3 mt-6">
                     <button type="button" onclick="closeAddJobModal()" class="btn-modern btn-secondary">Cancel</button>
-                    <button type="button" onclick="handleEmergencyFormSubmit()" class="btn-modern btn-primary">Add Job</button>
+                    <button type="button" onclick="handleEmergencyFormSubmit()" class="btn-modern btn-primary">
+                        <i class="fas fa-plus mr-2"></i>
+                        Create Job
+                    </button>
                 </div>
             </div>
         `;
@@ -171,10 +176,6 @@ function showAddJobModal() {
         // Set up radio button handlers
         formClone.querySelectorAll('input[name="job_type"]').forEach(radio => {
             radio.addEventListener('change', () => updateJobTypeUI(true));
-        });
-        
-        formClone.querySelectorAll('input[name="symbol_selection"]').forEach(radio => {
-            radio.addEventListener('change', () => updateSymbolSelectionUI(true));
         });
     } else {
         emergencyModal.innerHTML = `
@@ -247,22 +248,6 @@ function updateJobTypeUI(isEmergencyModal = false) {
     }
 }
 
-function updateSymbolSelectionUI(isEmergencyModal = false) {
-    const form = isEmergencyModal ? document.getElementById('emergency-form') : document;
-    
-    if (!form) return;
-    
-    const selection = form.querySelector('input[name="symbol_selection"]:checked')?.value;
-    if (!selection) return;
-    
-    const customSymbols = form.querySelectorAll('.custom-symbols');
-    
-    if (selection === 'custom') {
-        customSymbols.forEach(el => el.classList.remove('hidden'));
-    } else {
-        customSymbols.forEach(el => el.classList.add('hidden'));
-    }
-}
 
 // Handle submission from the emergency form
 function handleEmergencyFormSubmit() {
@@ -299,10 +284,9 @@ async function handleAddJob(e, isEmergencyModal = false) {
     if (!form) return;
     
     const jobType = form.querySelector('input[name="job_type"]:checked')?.value;
-    const symbolSelection = form.querySelector('input[name="symbol_selection"]:checked')?.value;
     const dataIntervalEl = form.querySelector('#data-interval');
     
-    if (!jobType || !symbolSelection || !dataIntervalEl) {
+    if (!jobType || !dataIntervalEl) {
         // Required form elements not found
         showToast('Form error: missing elements', 'error');
         return;
@@ -328,18 +312,6 @@ async function handleAddJob(e, isEmergencyModal = false) {
         } else {
             showToast('Interval value is required', 'error');
             return;
-        }
-    }
-    
-    if (symbolSelection === 'custom') {
-        const symbolsListEl = form.querySelector('#symbols-list');
-        if (symbolsListEl) {
-            const symbolsText = symbolsListEl.value.trim();
-            if (symbolsText) {
-                const symbols = symbolsText.split(',').map(s => s.trim());
-                jobData.symbols = symbols.map(symbol => ({ symbol: symbol, exchange: 'NSE' }));
-                jobData.exchanges = symbols.map(() => 'NSE');
-            }
         }
     }
     

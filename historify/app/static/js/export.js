@@ -266,36 +266,51 @@ function getExportFormData() {
     };
 }
 
-async function previewExport() {
-    if (selectedSymbols.size === 0) {
-        showToast('Please select at least one symbol', 'warning');
-        return;
+// Make previewExport globally accessible
+window.previewExport = function() {
+    try {
+        console.log('Preview Export clicked');
+        console.log('Selected symbols:', selectedSymbols.size);
+        
+        if (selectedSymbols.size === 0) {
+            showToast('Please select at least one symbol', 'warning');
+            return;
+        }
+        
+        const modal = document.getElementById('preview-modal');
+        if (!modal) {
+            console.error('Preview modal not found');
+            return;
+        }
+        
+        const formData = getExportFormData();
+        console.log('Form data:', formData);
+        
+        // Update preview summary
+        document.getElementById('preview-symbols').textContent = selectedSymbols.size;
+        document.getElementById('preview-range').textContent = formData.start_date && formData.end_date 
+            ? `${formData.start_date} to ${formData.end_date}` 
+            : 'All available data';
+        document.getElementById('preview-format').textContent = formData.format.toUpperCase();
+        
+        // Estimate size (rough calculation)
+        const estimatedRows = selectedSymbols.size * 250; // Assume ~250 trading days per year
+        const estimatedSize = estimatedRows * 100; // ~100 bytes per row
+        document.getElementById('preview-size').textContent = formatFileSize(estimatedSize);
+        
+        // Generate sample data
+        generatePreviewTable(formData);
+        
+        // Show modal
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.querySelector('.modal-backdrop').classList.add('show');
+            modal.querySelector('.modal-content').classList.add('show');
+        }, 10);
+    } catch (error) {
+        console.error('Error in previewExport:', error);
+        showToast('Error showing preview: ' + error.message, 'error');
     }
-    
-    const modal = document.getElementById('preview-modal');
-    const formData = getExportFormData();
-    
-    // Update preview summary
-    document.getElementById('preview-symbols').textContent = selectedSymbols.size;
-    document.getElementById('preview-range').textContent = formData.start_date && formData.end_date 
-        ? `${formData.start_date} to ${formData.end_date}` 
-        : 'All available data';
-    document.getElementById('preview-format').textContent = formData.format.toUpperCase();
-    
-    // Estimate size (rough calculation)
-    const estimatedRows = selectedSymbols.size * 250; // Assume ~250 trading days per year
-    const estimatedSize = estimatedRows * 100; // ~100 bytes per row
-    document.getElementById('preview-size').textContent = formatFileSize(estimatedSize);
-    
-    // Generate sample data
-    generatePreviewTable(formData);
-    
-    // Show modal
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.querySelector('.modal-backdrop').classList.add('show');
-        modal.querySelector('.modal-content').classList.add('show');
-    }, 10);
 }
 
 function generatePreviewTable(formData) {
@@ -367,7 +382,8 @@ function generatePreviewTable(formData) {
     });
 }
 
-function closePreviewModal() {
+// Make closePreviewModal globally accessible
+window.closePreviewModal = function() {
     const modal = document.getElementById('preview-modal');
     modal.querySelector('.modal-backdrop').classList.remove('show');
     modal.querySelector('.modal-content').classList.remove('show');

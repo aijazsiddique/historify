@@ -193,15 +193,12 @@ async function handleExport(e) {
         if (response.ok) {
             const result = await response.json();
             
-            if (result.job_id) {
-                // Large export - queued
-                showToast('Export queued successfully', 'success');
-                addToQueue(result);
-                refreshQueue();
-            } else if (result.download_url) {
-                // Small export - immediate download
+            if (result.download_url) {
+                // Direct download for all formats now
                 window.location.href = result.download_url;
-                showToast('Export completed', 'success');
+                showToast('Export started - download will begin shortly', 'success');
+            } else {
+                showToast('Export failed - no download URL received', 'error');
             }
         } else {
             const error = await response.json();
@@ -317,6 +314,7 @@ function generatePreviewTable(formData) {
     const headerRow = document.createElement('tr');
     headers.forEach(header => {
         const th = document.createElement('th');
+        th.className = 'px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider';
         th.textContent = header;
         headerRow.appendChild(th);
     });
@@ -332,28 +330,36 @@ function generatePreviewTable(formData) {
     
     const firstSymbol = Array.from(selectedSymbols)[0];
     
-    sampleDates.forEach(date => {
+    sampleDates.forEach((date, index) => {
         const row = document.createElement('tr');
+        row.className = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
+        
+        // Generate sample prices
+        const open = (Math.random() * 100 + 1000).toFixed(2);
+        const high = (parseFloat(open) + Math.random() * 20).toFixed(2);
+        const low = (parseFloat(open) - Math.random() * 20).toFixed(2);
+        const close = (Math.random() * (high - low) + parseFloat(low)).toFixed(2);
+        const volume = Math.floor(Math.random() * 1000000);
         
         if (formData.format === 'combined') {
             row.innerHTML = `
-                <td>${firstSymbol.symbol}</td>
-                <td>${firstSymbol.exchange}</td>
-                <td>${date}</td>
-                <td>${(Math.random() * 100 + 100).toFixed(2)}</td>
-                <td>${(Math.random() * 100 + 110).toFixed(2)}</td>
-                <td>${(Math.random() * 100 + 90).toFixed(2)}</td>
-                <td>${(Math.random() * 100 + 105).toFixed(2)}</td>
-                <td>${Math.floor(Math.random() * 1000000)}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${firstSymbol.symbol}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${firstSymbol.exchange}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${date}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${open}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${high}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${low}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${close}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${volume.toLocaleString()}</td>
             `;
         } else {
             row.innerHTML = `
-                <td>${date}</td>
-                <td>${(Math.random() * 100 + 100).toFixed(2)}</td>
-                <td>${(Math.random() * 100 + 110).toFixed(2)}</td>
-                <td>${(Math.random() * 100 + 90).toFixed(2)}</td>
-                <td>${(Math.random() * 100 + 105).toFixed(2)}</td>
-                <td>${Math.floor(Math.random() * 1000000)}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${date}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${open}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${high}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${low}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${close}</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">${volume.toLocaleString()}</td>
             `;
         }
         

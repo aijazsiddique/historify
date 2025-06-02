@@ -201,51 +201,70 @@
     <div class="modal-backdrop" onclick="closePreviewModal()"></div>
     <div class="modal-content max-w-4xl">
         <div class="modal-header">
-            <h3 class="text-xl font-semibold">Export Preview</h3>
-            <button onclick="closePreviewModal()" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times"></i>
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                <i class="fas fa-file-export text-primary mr-2"></i>
+                Export Preview
+            </h3>
+            <button onclick="closePreviewModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <i class="fas fa-times text-lg"></i>
             </button>
         </div>
         
         <div class="modal-body">
-            <!-- Summary -->
+            <!-- Summary Cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="text-center">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+                    <i class="fas fa-chart-line text-blue-500 text-xl mb-2"></i>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Symbols</p>
-                    <p class="text-2xl font-bold" id="preview-symbols">0</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white" id="preview-symbols">0</p>
                 </div>
-                <div class="text-center">
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+                    <i class="fas fa-calendar-alt text-green-500 text-xl mb-2"></i>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Date Range</p>
-                    <p class="text-sm font-medium" id="preview-range">-</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white" id="preview-range">-</p>
                 </div>
-                <div class="text-center">
+                <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
+                    <i class="fas fa-file-csv text-purple-500 text-xl mb-2"></i>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Format</p>
-                    <p class="text-sm font-medium" id="preview-format">-</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white" id="preview-format">-</p>
                 </div>
-                <div class="text-center">
+                <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 text-center">
+                    <i class="fas fa-hdd text-orange-500 text-xl mb-2"></i>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Est. Size</p>
-                    <p class="text-sm font-medium" id="preview-size">-</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white" id="preview-size">-</p>
                 </div>
             </div>
             
-            <!-- Sample Data -->
-            <div class="overflow-x-auto">
-                <table class="min-w-full table">
-                    <thead id="preview-thead">
-                        <!-- Headers will be generated -->
-                    </thead>
-                    <tbody id="preview-tbody">
-                        <!-- Sample rows will be generated -->
-                    </tbody>
-                </table>
+            <!-- Sample Data Preview -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                    <i class="fas fa-table mr-2 text-gray-500"></i>
+                    Sample Data Preview
+                </h4>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table class="min-w-full table">
+                        <thead id="preview-thead" class="bg-gray-100 dark:bg-gray-700">
+                            <!-- Headers will be generated -->
+                        </thead>
+                        <tbody id="preview-tbody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <!-- Sample rows will be generated -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-right">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Showing sample data only
+                </p>
             </div>
         </div>
         
         <div class="modal-footer">
             <button onclick="closePreviewModal()" class="btn-modern btn-secondary">
-                Close Preview
+                <i class="fas fa-times mr-2"></i>
+                Cancel
             </button>
             <button onclick="closePreviewModal(); document.getElementById('export-form').dispatchEvent(new Event('submit'))" class="btn-modern btn-primary">
+                <i class="fas fa-download mr-2"></i>
                 Proceed with Export
             </button>
         </div>

@@ -358,24 +358,7 @@ def export_data():
         else:
             end_date_obj = datetime.now().date()
         
-        # For large exports (>10 symbols or combined format), queue the job
-        if len(symbols) > 10 or format_type in ['combined', 'zip']:
-            # Create export job (in production, use a task queue like Celery)
-            job_id = str(datetime.now().timestamp())
-            job = {
-                'id': job_id,
-                'symbol_count': len(symbols),
-                'format': format_type,
-                'status': 'pending',
-                'progress': 0,
-                'created_at': datetime.now().isoformat()
-            }
-            
-            # In production, queue the job for background processing
-            # For now, return job info
-            return jsonify({'job_id': job_id, **job})
-        
-        # For small exports, process immediately
+        # Generate export ID for all formats
         export_id = str(datetime.now().timestamp())
         
         # Store export metadata in session for retrieval during download
@@ -438,7 +421,59 @@ def download_export(export_id):
     else:
         end_date_obj = datetime.now().date()
     
-    # Create CSV data
+    # Handle different export formats
+    if format_type == 'zip':
+        # Create ZIP file with individual CSV files for each symbol
+        import io
+        import zipfile
+        
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for symbol_data in symbols:
+                symbol = symbol_data['symbol']
+                exchange = symbol_data['exchange']
+                
+                # Create CSV for this symbol
+                csv_output = StringIO()
+                writer = csv.writer(csv_output)
+                writer.writerow(['Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Volume'])
+                
+                try:
+                    data = get_data_by_timeframe(symbol, exchange, interval, start_date_obj, end_date_obj)
+                    
+                    for item in data:
+                        writer.writerow([
+                            item.date.strftime('%Y-%m-%d'),
+                            item.time.strftime('%H:%M:%S') if item.time else '',
+                            item.open,
+                            item.high,
+                            item.low,
+                            item.close,
+                            item.volume
+                        ])
+                    
+                    # Add CSV to ZIP
+                    csv_filename = f"{symbol}_{exchange}_{interval}.csv"
+                    zip_file.writestr(csv_filename, csv_output.getvalue())
+                    
+                except Exception as e:
+                    logging.error(f"Error exporting data for {symbol}: {str(e)}")
+                    continue
+        
+        # Clear the export from session
+        session.pop(f'export_{export_id}', None)
+        
+        # Return ZIP file
+        zip_buffer.seek(0)
+        filename = f'historify_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+        
+        return Response(
+            zip_buffer.getvalue(),
+            mimetype='application/zip',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+    
+    # Create CSV data for combined and individual formats
     output = StringIO()
     
     if format_type == 'combined':
@@ -471,8 +506,7 @@ def download_export(export_id):
                 continue
                 
     else:
-        # Individual format: data for first symbol only (for demo)
-        # In production, this would create a zip file with individual CSVs
+        # Individual format: data for first symbol only
         writer = csv.writer(output)
         writer.writerow(['Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Volume'])
         

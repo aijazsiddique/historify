@@ -11,7 +11,8 @@
       "Bash(curl:*)",
       "Bash(pkill:*)",
       "Bash(node:*)",
-      "WebFetch(domain:www.gnu.org)"
+      "WebFetch(domain:www.gnu.org)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

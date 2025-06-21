@@ -435,9 +435,11 @@ def get_supported_exchanges():
         {"code": "NSE", "name": "NSE Equity"},
         {"code": "NFO", "name": "NSE Futures & Options"},
         {"code": "CDS", "name": "NSE Currency"},
+        {"code": "NSE_INDEX", "name": "NSE Index"},
         {"code": "BSE", "name": "BSE Equity"},
         {"code": "BFO", "name": "BSE Futures & Options"},
         {"code": "BCD", "name": "BSE Currency"},
+        {"code": "BSE_INDEX", "name": "BSE Index (Sensex)"},
         {"code": "MCX", "name": "MCX Commodity"}
     ]
     return exchanges

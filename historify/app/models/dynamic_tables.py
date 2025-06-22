@@ -152,3 +152,30 @@ def get_available_tables():
                 })
     
     return tables
+
+def get_earliest_date(symbol, exchange, interval):
+    """
+    Get the earliest available date for the specified symbol, exchange, and interval
+    
+    Args:
+        symbol: Stock symbol
+        exchange: Exchange code
+        interval: Data interval
+        
+    Returns:
+        datetime.date: Earliest available date or None if no data exists
+    """
+    try:
+        model = ensure_table_exists(symbol, exchange, interval)
+        
+        # Query the earliest date from the table
+        earliest_record = model.query.order_by(model.date.asc()).first()
+        
+        if earliest_record:
+            return earliest_record.date
+        else:
+            return None
+            
+    except Exception as e:
+        logging.error(f"Error getting earliest date for {symbol} ({exchange}) {interval}: {str(e)}")
+        return None

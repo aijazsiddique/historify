@@ -133,18 +133,28 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
         matching_tables = [t for t in available_tables if t['symbol'] == symbol.upper() and t['exchange'] == exchange.upper()]
         logging.info(f"Available tables for {symbol} ({exchange}): {matching_tables}")
         
-        # Get start and end dates based on interval
+        # Get start and end dates based on interval - use all available data
         end_date = datetime.now().date()
-        if interval in ['1m', '5m', '15m', '30m']:
-            start_date = end_date - timedelta(days=7)  # 1 week for minute data
-        elif interval == '1h':
-            start_date = end_date - timedelta(days=30)  # 1 month for hourly data
-        elif interval == '1d':
-            start_date = end_date - timedelta(days=365)  # 1 year for daily data
-        elif interval == '1w':
-            start_date = end_date - timedelta(days=365*3)  # 3 years for weekly data
+        
+        # Instead of hardcoded limits, get the earliest available data from the table
+        from app.models.dynamic_tables import get_earliest_date
+        earliest_date = get_earliest_date(symbol, exchange, interval)
+        
+        if earliest_date:
+            start_date = earliest_date
+            logging.info(f"Using earliest available date: {start_date}")
         else:
-            start_date = end_date - timedelta(days=30)  # Default to 30 days
+            # Fallback to reasonable defaults only if no data exists
+            if interval in ['1m', '5m', '15m', '30m']:
+                start_date = end_date - timedelta(days=7)  # 1 week for minute data
+            elif interval == '1h':
+                start_date = end_date - timedelta(days=30)  # 1 month for hourly data
+            elif interval == '1d':
+                start_date = end_date - timedelta(days=365*10)  # 10 years for daily data
+            elif interval == '1w':
+                start_date = end_date - timedelta(days=365*10)  # 10 years for weekly data
+            else:
+                start_date = end_date - timedelta(days=365)  # Default to 1 year
         
         logging.info(f"Date range: {start_date} to {end_date}")
         

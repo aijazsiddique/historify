@@ -78,6 +78,8 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
         
         # Fetch historical data from OpenAlgo API
         logging.info(f"Fetching historical data for {symbol} from exchange {exchange}, period {start_date} to {end_date}")
+        logging.info(f"Request details - Symbol: {symbol}, Exchange: {exchange}, Interval: {openalgo_interval}, Start: {start_date}, End: {end_date}")
+        
         response = client.history(
             symbol=symbol,
             exchange=exchange,
@@ -86,11 +88,21 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
             end_date=end_date
         )
         
+        # Log response type and size
+        if hasattr(response, '__len__'):
+            logging.info(f"Response type: {type(response).__name__}, Size: {len(response)} records")
+        
         # Check if response is a pandas DataFrame (as seen in the sample response)
         import pandas as pd
         
         if isinstance(response, pd.DataFrame):
             logging.info(f"Received pandas DataFrame with {len(response)} rows for {symbol}")
+            
+            # Log the actual date range of received data
+            if not response.empty:
+                first_date = response.index[0]
+                last_date = response.index[-1]
+                logging.info(f"Actual data range: {first_date} to {last_date}")
             
             if response.empty:
                 logging.warning(f"Empty DataFrame received for {symbol}")
@@ -125,6 +137,7 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
                     'exchange': exchange
                 })
             
+            logging.info(f"Processed {len(data)} records for {symbol}. Date range: {data[0]['date']} to {data[-1]['date']}" if data else f"No data processed for {symbol}")
             return data
             
         # Handle traditional JSON response format (keeping as fallback)
@@ -150,6 +163,7 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
                     'exchange': exchange
                 })
             
+            logging.info(f"Processed {len(data)} records for {symbol}. Date range: {data[0]['date']} to {data[-1]['date']}" if data else f"No data processed for {symbol}")
             return data
         else:
             # If it's neither a DataFrame nor a valid JSON response
@@ -351,7 +365,7 @@ def fetch_realtime_quotes(symbols, exchanges=None):
         
         for symbol, exchange in batch:
             try:
-                logging.info(f"Fetching quote for {symbol} from exchange {exchange}")
+                logging.info(f"Fetching quote for '{symbol}' from exchange '{exchange}'")
                 # Apply rate limiter to each API call
                 response = client.quotes(symbol=symbol, exchange=exchange)
                 

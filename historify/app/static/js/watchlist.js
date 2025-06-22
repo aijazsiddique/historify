@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Build URL with symbols and exchanges
-        const apiUrl = `/api/quotes?symbols=${data.map(item => item.symbol).join(',')}&exchanges=${data.map(item => item.exchange).join(',')}`;
+        const apiUrl = `/api/quotes?symbols=${encodeURIComponent(data.map(item => item.symbol).join(','))}&exchanges=${encodeURIComponent(data.map(item => item.exchange).join(','))}`;
         
         // Get real-time quotes for watchlist items
         fetch(apiUrl)
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td>
                       <div class="flex gap-2">
-                        <a href="/charts?symbol=${item.symbol}&exchange=${item.exchange}" class="btn btn-sm btn-outline btn-primary">
+                        <a href="/charts?symbol=${encodeURIComponent(item.symbol)}&exchange=${encodeURIComponent(item.exchange)}" class="btn btn-sm btn-outline btn-primary">
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                           </svg>
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleAddSymbol(event) {
     event.preventDefault();
     
-    const symbol = symbolInput.value.trim().toUpperCase();
+    const symbol = symbolInput.value.trim();
     const name = nameInput.value.trim() || symbol;
     const exchange = exchangeInput.value;
     

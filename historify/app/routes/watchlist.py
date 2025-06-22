@@ -26,7 +26,7 @@ def add_item():
     if not data or 'symbol' not in data:
         return jsonify({'error': 'Symbol is required'}), 400
     
-    symbol = data['symbol'].strip().upper()
+    symbol = data['symbol'].strip()
     if not symbol:
         return jsonify({'error': 'Symbol cannot be empty'}), 400
     

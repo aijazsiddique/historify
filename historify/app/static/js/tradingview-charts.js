@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Selected timeframe:', apiInterval);
             
             // Fetch data from API
-            const response = await fetch(`/charts/api/chart-data/${symbolSelector.value}/${exchangeSelector.value}/${apiInterval}/${emaPeriodInput.value}/${rsiPeriodInput.value}`);
+            const response = await fetch(`/charts/api/chart-data/${encodeURIComponent(symbolSelector.value)}/${encodeURIComponent(exchangeSelector.value)}/${apiInterval}/${emaPeriodInput.value}/${rsiPeriodInput.value}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

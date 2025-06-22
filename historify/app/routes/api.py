@@ -201,11 +201,15 @@ def get_quotes():
     results = []
     
     if symbols_param:
-        symbols = symbols_param.split(',')
+        # URL decode the symbols parameter first, then split
+        from urllib.parse import unquote
+        decoded_symbols = unquote(symbols_param)
+        symbols = decoded_symbols.split(',')
         
         # If exchanges are provided, process them
         if exchanges_param:
-            exchanges = exchanges_param.split(',')
+            decoded_exchanges = unquote(exchanges_param)
+            exchanges = decoded_exchanges.split(',')
             # Ensure we have an exchange for each symbol
             if len(exchanges) < len(symbols):
                 exchanges.extend(['NSE'] * (len(symbols) - len(exchanges)))

@@ -12,7 +12,8 @@
       "Bash(pkill:*)",
       "Bash(node:*)",
       "WebFetch(domain:www.gnu.org)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": []
   }

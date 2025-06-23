@@ -292,8 +292,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         showToast('success', 'Symbol added to watchlist');
         
-        // Reload watchlist data
-        loadWatchlistData();
+        // Add the new symbol to the table without reloading entire watchlist
+        if (data.item) {
+          addSymbolToTable(data.item);
+        }
       })
       .catch(error => {
         console.error('Error adding symbol:', error);
@@ -345,8 +347,40 @@ document.addEventListener('DOMContentLoaded', () => {
         
         showToast('success', `Removed ${currentDeleteItem.symbol} from watchlist`);
         
-        // Reload watchlist data
-        loadWatchlistData();
+        // Remove only the deleted row from the table
+        const rowToDelete = document.querySelector(`tr[data-symbol-id="${currentDeleteItem.id}"]`);
+        if (!rowToDelete) {
+          // Fallback: find by delete button data-id
+          const deleteButton = document.querySelector(`.delete-btn[data-id="${currentDeleteItem.id}"]`);
+          if (deleteButton) {
+            const row = deleteButton.closest('tr');
+            if (row) {
+              row.remove();
+            }
+          }
+        } else {
+          rowToDelete.remove();
+        }
+        
+        // Check if table is now empty
+        const remainingRows = watchlistTable.querySelectorAll('tr');
+        if (remainingRows.length === 0) {
+          watchlistTable.innerHTML = `
+            <tr>
+              <td colspan="6" class="text-center">
+                <div class="py-4">
+                  <p class="mb-3">Your watchlist is empty</p>
+                  <label for="add-symbol-modal" class="btn btn-primary btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    Add Symbol
+                  </label>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
       })
       .catch(error => {
         console.error('Error deleting symbol:', error);
@@ -394,6 +428,135 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.remove();
       }, 300);
     }, 3000);
+  }
+  
+  /**
+   * Add a new symbol row to the watchlist table
+   */
+  function addSymbolToTable(item) {
+    // Check if table is empty (shows empty message)
+    const tbody = watchlistTable;
+    const emptyRow = tbody.querySelector('tr td[colspan="6"]');
+    if (emptyRow && emptyRow.textContent.includes('Your watchlist is empty')) {
+      tbody.innerHTML = '';
+    }
+    
+    // Fetch quote for the new symbol only
+    const apiUrl = `/api/quotes?symbols=${encodeURIComponent(item.symbol)}&exchanges=${encodeURIComponent(item.exchange)}`;
+    
+    // Create a loading row first
+    const loadingRow = document.createElement('tr');
+    loadingRow.setAttribute('data-symbol-id', item.id);
+    loadingRow.innerHTML = `
+      <td>${item.symbol}</td>
+      <td>${item.name || item.symbol}</td>
+      <td>${item.exchange}</td>
+      <td colspan="2" class="text-center">
+        <span class="loading loading-spinner loading-sm"></span>
+        <span class="ml-2">Loading quote...</span>
+      </td>
+      <td>
+        <div class="flex gap-2">
+          <a href="/charts?symbol=${encodeURIComponent(item.symbol)}&exchange=${encodeURIComponent(item.exchange)}" class="btn btn-sm btn-outline btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+          </a>
+          <button class="btn btn-sm btn-outline btn-error delete-btn" data-id="${item.id}" data-symbol="${item.symbol}" data-name="${item.name || item.symbol}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </td>
+    `;
+    
+    // Add the loading row to the table
+    tbody.appendChild(loadingRow);
+    
+    // Fetch the quote for this symbol
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(quotes => {
+        let quote = { price: 0, change: 0 };
+        
+        if (Array.isArray(quotes) && quotes.length > 0) {
+          const quoteData = quotes[0];
+          if (quoteData && quoteData.symbol) {
+            quote = {
+              symbol: quoteData.symbol,
+              price: quoteData.ltp !== undefined ? parseFloat(quoteData.ltp) : 
+                     quoteData.bid !== undefined ? parseFloat(quoteData.bid) : 0,
+              change: quoteData.change_percent !== undefined ? parseFloat(quoteData.change_percent) : 0,
+              volume: quoteData.volume !== undefined ? parseInt(quoteData.volume) : 0,
+              exchange: quoteData.exchange || ''
+            };
+          }
+        }
+        
+        // Update the row with actual quote data
+        const price = typeof quote.price === 'number' ? quote.price : 0;
+        const change = typeof quote.change === 'number' ? quote.change : 0;
+        const changeClass = change >= 0 ? 'text-success' : 'text-error';
+        const changeIcon = change >= 0 ? '↑' : '↓';
+        
+        loadingRow.innerHTML = `
+          <td>${item.symbol}</td>
+          <td>${item.name || item.symbol}</td>
+          <td>${item.exchange}</td>
+          <td>${price.toFixed(2)}</td>
+          <td class="${changeClass}">
+            ${changeIcon} ${Math.abs(change).toFixed(2)}%
+          </td>
+          <td>
+            <div class="flex gap-2">
+              <a href="/charts?symbol=${item.symbol}" class="btn btn-sm btn-outline btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+              </a>
+              <button class="btn btn-sm btn-outline btn-error delete-btn" data-id="${item.id}" data-symbol="${item.symbol}" data-name="${item.name || item.symbol}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        `;
+        
+        // Add event listener to the delete button
+        const deleteBtn = loadingRow.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', handleDeleteClick);
+      })
+      .catch(error => {
+        console.error('Error fetching quote for new symbol:', error);
+        // Update row without quote data
+        loadingRow.innerHTML = `
+          <td>${item.symbol}</td>
+          <td>${item.name || item.symbol}</td>
+          <td>${item.exchange}</td>
+          <td>--</td>
+          <td>--</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="/charts?symbol=${item.symbol}" class="btn btn-sm btn-outline btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+              </a>
+              <button class="btn btn-sm btn-outline btn-error delete-btn" data-id="${item.id}" data-symbol="${item.symbol}" data-name="${item.name || item.symbol}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        `;
+        
+        // Add event listener to the delete button
+        const deleteBtn = loadingRow.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', handleDeleteClick);
+      });
   }
   
   // Manual refresh functionality

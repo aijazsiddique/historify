@@ -11,6 +11,7 @@ from app.models.watchlist import WatchlistItem
 from app.models.checkpoint import Checkpoint
 from app.models.dynamic_tables import ensure_table_exists, get_data_by_timeframe
 from app.utils.data_fetcher import fetch_historical_data, fetch_realtime_quotes, OPENALGO_AVAILABLE
+from app.utils.rate_limiter import broker_rate_limiter
 
 api_bp = Blueprint('api', __name__)
 

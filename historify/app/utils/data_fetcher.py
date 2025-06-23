@@ -367,7 +367,10 @@ def fetch_realtime_quotes(symbols, exchanges=None):
             try:
                 logging.info(f"Fetching quote for '{symbol}' from exchange '{exchange}'")
                 # Apply rate limiter to each API call
-                response = client.quotes(symbol=symbol, exchange=exchange)
+                @broker_rate_limiter
+                def get_quote():
+                    return client.quotes(symbol=symbol, exchange=exchange)
+                response = get_quote()
                 
                 if response.get('status') == 'success' and 'data' in response:
                     quote_data = response['data']

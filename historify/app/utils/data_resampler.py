@@ -490,6 +490,20 @@ class DataResampler:
         
         return validation_results
     
+    def resample(self, df: pd.DataFrame, target_timeframe: str) -> pd.DataFrame:
+        """
+        Resample a DataFrame to a target timeframe.
+        
+        Args:
+            df: DataFrame with datetime index and OHLCV columns
+            target_timeframe: Target timeframe for resampling
+            
+        Returns:
+            Resampled DataFrame
+        """
+        pandas_target_tf = self._validate_timeframe(target_timeframe)
+        return self._aggregate_ohlcv(df, pandas_target_tf)
+
     def resample_data(
         self,
         symbol: str,

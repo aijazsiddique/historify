@@ -7,8 +7,12 @@ from flask import request, redirect, url_for, flash, jsonify
 from app.models.settings import AppSettings
 
 
+from flask import current_app
+
 def api_configured():
     """Check if OpenAlgo API is properly configured"""
+    if current_app.config.get('TESTING'):
+        return bool(current_app.config.get('OPENALGO_API_KEY'))
     api_key = AppSettings.get_value('openalgo_api_key')
     api_host = AppSettings.get_value('openalgo_api_host')
     

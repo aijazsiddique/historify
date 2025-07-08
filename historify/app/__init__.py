@@ -9,14 +9,16 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-def create_app(config_class=None):
+from config import Config, TestingConfig
+
+def create_app(config_name='default'):
     """Create and configure the Flask application"""
     app = Flask(__name__, instance_relative_config=True)
     
-    # Configure the app from environment variables
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key_change_this')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///historify.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    if config_name == 'testing':
+        app.config.from_object(TestingConfig)
+    else:
+        app.config.from_object(Config)
     
     # Ensure the instance folder exists
     try:
@@ -57,9 +59,10 @@ def create_app(config_class=None):
     logging.info("Initializing scheduler manager")
     scheduler_manager.init_app(app)
     
-    # Add API configuration check middleware
-    from app.utils.auth import check_api_config_middleware
-    app.before_request(check_api_config_middleware)
+    # Add API configuration check middleware only if not testing
+    if config_name != 'testing':
+        from app.utils.auth import check_api_config_middleware
+        app.before_request(check_api_config_middleware)
     
     # Create database tables if they don't exist
     with app.app_context():

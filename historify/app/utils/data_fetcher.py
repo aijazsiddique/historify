@@ -63,8 +63,12 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
 
     # Get API settings from database instead of environment
     from app.models.settings import AppSettings
-    api_key = AppSettings.get_value('openalgo_api_key')
-    host = AppSettings.get_value('openalgo_api_host', 'http://127.0.0.1:5000')
+    if has_app_context() and current_app.config.get('TESTING'):
+        api_key = current_app.config.get('OPENALGO_API_KEY')
+        host = current_app.config.get('OPENALGO_API_HOST', 'http://127.0.0.1:5000')
+    else:
+        api_key = AppSettings.get_value('openalgo_api_key')
+        host = AppSettings.get_value('openalgo_api_host', 'http://127.0.0.1:5000')
     
     if not OPENALGO_AVAILABLE:
         logging.error(f"Cannot fetch data for {symbol}: OpenAlgo API module is not available")

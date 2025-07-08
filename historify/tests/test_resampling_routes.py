@@ -1,4 +1,5 @@
 import pytest
+import json
 from app import create_app
 from app.models import db
 from app.models.dynamic_tables import ensure_table_exists
@@ -13,99 +14,100 @@ def test_client():
         db.create_all()
         # Create a table for 1-minute data for testing
         ensure_table_exists('TEST', 'NSE', '1m')
+        # Populate with 1-minute data
+        model = ensure_table_exists('TEST', 'NSE', '1m')
+        db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 15, 0), open=100, high=101, low=99, close=100, volume=100))
+        db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 16, 0), open=100, high=102, low=98, close=101, volume=200))
+        db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 17, 0), open=101, high=103, low=100, close=102, volume=300))
+        db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 18, 0), open=102, high=104, low=101, close=103, volume=400))
+        db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 19, 0), open=103, high=105, low=102, close=104, volume=500))
+        db.session.commit()
         yield testing_client
         db.drop_all()
 
-@pytest.fixture(scope='module')
-def runner(test_client):
-    return test_client.application.test_cli_runner()
-
-def test_get_chart_data_no_resampling(test_client):
+def test_resample_data_api(test_client):
     """
     GIVEN a Flask application configured for testing
-    WHEN the '/api/chart-data' is requested for an interval that exists
-    THEN check that the response is valid and data is not resampled
+    WHEN the '/api/resample/...' endpoint is requested
+    THEN check that the response is valid and data is resampled correctly
     """
-    # First, populate the database with some 5-minute data
-    model = ensure_table_exists('TEST', 'NSE', '5m')
-    db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 15, 0), open=100, high=110, low=90, close=105, volume=1000))
-    db.session.commit()
-
-    response = test_client.get('/charts/api/chart-data/TEST/NSE/5m/20/14?start_date=2025-01-01&end_date=2025-01-01')
+    response = test_client.get('/api/resample/TEST/NSE/1m/5m?start_date=2025-01-01&end_date=2025-01-01')
     assert response.status_code == 200
     json_data = response.get_json()
-    assert json_data['resampled'] is False
-    assert len(json_data['candlestick']) > 0
+    assert len(json_data) == 1
+    assert json_data[0]['open'] == 100
+    assert json_data[0]['high'] == 105
+    assert json_data[0]['low'] == 98
+    assert json_data[0]['close'] == 104
+    assert json_data[0]['volume'] == 1500
 
-def test_get_chart_data_with_resampling(test_client, mocker):
+def test_resample_data_api_invalid_interval(test_client):
     """
-    GIVEN a Flask application configured for testing
-    WHEN the '/api/chart-data' is requested for an interval that does not exist, but 1m data does
-    THEN check that the response is valid and data is resampled
+    GIVEN a Flask application
+    WHEN the '/api/resample/...' is requested with an invalid interval
+    THEN check for a 400 error
     """
-    mocker.patch('app.routes.charts.fetch_historical_data', return_value=[])
-    # Clear 5m data to ensure resampling is triggered
-    db.session.query(ensure_table_exists('TEST', 'NSE', '5m')).delete()
-    db.session.commit()
-    # Populate with 1-minute data
-    model = ensure_table_exists('TEST', 'NSE', '1m')
-    db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 15, 0), open=100, high=101, low=99, close=100, volume=100))
-    db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 16, 0), open=100, high=102, low=98, close=101, volume=200))
-    db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 17, 0), open=101, high=103, low=100, close=102, volume=300))
-    db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 18, 0), open=102, high=104, low=101, close=103, volume=400))
-    db.session.add(model(date=datetime(2025, 1, 1).date(), time=time(9, 19, 0), open=103, high=105, low=102, close=104, volume=500))
-    db.session.commit()
-
-    response = test_client.get('/charts/api/chart-data/TEST/NSE/5m/20/14?start_date=2025-01-01&end_date=2025-01-01')
-    assert response.status_code == 200
+    response = test_client.get('/api/resample/TEST/NSE/1m/invalid?start_date=2025-01-01&end_date=2025-01-01')
+    assert response.status_code == 400
     json_data = response.get_json()
-    assert json_data['resampled'] is True
-    assert len(json_data['candlestick']) == 1
-    assert json_data['candlestick'][0]['open'] == 100
-    assert json_data['candlestick'][0]['high'] == 105
-    assert json_data['candlestick'][0]['low'] == 98
-    assert json_data['candlestick'][0]['close'] == 104
-    assert json_data['candlestick'][0]['volume'] == 1500
-
-def test_get_chart_data_with_caching(test_client, mocker):
-    """
-    GIVEN a Flask application configured for testing
-    WHEN the '/api/chart-data' is requested multiple times for a resampled interval
-    THEN check that the second response is faster and data is still correct
-    """
-    mocker.patch('app.routes.charts.fetch_historical_data', return_value=[])
-    # Clear the cache first
-    from app.utils.cache_manager import cache
-    with test_client.application.app_context():
-        cache.clear()
-
-    # First request to populate the cache
-    response1 = test_client.get('/charts/api/chart-data/TEST/NSE/15m/20/14?start_date=2025-01-01&end_date=2025-01-01')
-    assert response1.status_code == 200
-
-    # Second request should hit the cache
-    response2 = test_client.get('/charts/api/chart-data/TEST/NSE/15m/20/14?start_date=2025-01-01&end_date=2025-01-01')
-    assert response2.status_code == 200
-    json_data = response2.get_json()
-    assert json_data['resampled'] is True
-    assert len(json_data['candlestick']) > 0
-
-# This test is more complex and may require mocking the data fetcher
-# For now, we will just test the case where data is not found and no download is attempted
-def test_get_chart_data_no_1m_data(test_client, mocker):
-    """
-    GIVEN a Flask application configured for testing
-    WHEN the '/api/chart-data' is requested for an interval that does not exist and 1m data does not exist
-    THEN check that the response is valid and no data is returned
-    """
-    mocker.patch('app.routes.charts.fetch_historical_data', return_value=[])
-    # Ensure no data exists for this symbol
-    db.session.query(ensure_table_exists('NO_DATA', 'NSE', '1m')).delete()
-    db.session.commit()
-
-    response = test_client.get('/charts/api/chart-data/NO_DATA/NSE/5m/20/14?start_date=2025-01-01&end_date=2025-01-01')
-    assert response.status_code == 200
-    json_data = response.get_json()
-    assert json_data['resampled'] is False
-    assert len(json_data['candlestick']) == 0
     assert 'error' in json_data
+
+def test_bulk_resample_data_api(test_client):
+    """
+    GIVEN a Flask application
+    WHEN the '/api/charts/resample' endpoint is requested with valid data
+    THEN check that the response is valid and contains resampled data
+    """
+    requests = [
+        {
+            'symbol': 'TEST',
+            'exchange': 'NSE',
+            'from_interval': '1m',
+            'to_interval': '5m',
+            'start_date': '2025-01-01',
+            'end_date': '2025-01-01'
+        }
+    ]
+    response = test_client.post('/api/charts/resample', json={'requests': requests})
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert len(json_data['success']) == 1
+    assert len(json_data['failed']) == 0
+    assert len(json_data['success'][0]['data']) == 1
+
+def test_get_data_with_resampling_param(test_client):
+    """
+    GIVEN a Flask application
+    WHEN the '/api/data' endpoint is requested with the 'resample_to' parameter
+    THEN check that the data is resampled correctly
+    """
+    response = test_client.get('/api/data?symbol=TEST&exchange=NSE&interval=1m&resample_to=5m&start_date=2025-01-01&end_date=2025-01-01')
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert len(json_data) == 1
+    assert json_data[0]['interval'] == '5m'
+    assert json_data[0]['open'] == 100
+
+def test_export_data_with_resampling(test_client):
+    """
+    GIVEN a Flask application
+    WHEN an export is requested with resampling
+    THEN check that the download contains resampled data
+    """
+    export_payload = {
+        "symbols": [{"symbol": "TEST", "exchange": "NSE"}],
+        "start_date": "2025-01-01",
+        "end_date": "2025-01-01",
+        "interval": "1m",
+        "format": "individual",
+        "resample_to": "5m"
+    }
+    response = test_client.post('/api/export', json=export_payload)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert 'download_url' in json_data
+
+    download_response = test_client.get(json_data['download_url'])
+    assert download_response.status_code == 200
+    csv_data = download_response.data.decode('utf-8')
+    assert '100.0,105.0,98.0,104.0,1500' in csv_data

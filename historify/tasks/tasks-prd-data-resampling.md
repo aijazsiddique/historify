@@ -52,15 +52,15 @@
   - [x] 3.7 Update existing chart endpoints to support resampling parameters
   - [x] 3.8 Create integration tests for chart-resampling workflow
 
-- [ ] 4.0 Build API Endpoints for Resampled Data Access
-  - [ ] 4.1 Add new route `GET /api/resample/<symbol>/<exchange>/<from_interval>/<to_interval>` in `app/routes/api.py`
-  - [ ] 4.2 Create `POST /api/charts/resample` endpoint for bulk resampling requests
-  - [ ] 4.3 Integrate resampling capability into existing `/api/charts/data` endpoint
-  - [ ] 4.4 Add resampling support to data export functionality in existing export routes
-  - [ ] 4.5 Implement API rate limiting for resampling operations to prevent abuse
-  - [ ] 4.6 Add request validation and error handling for API endpoints
-  - [ ] 4.7 Update API documentation to include resampling endpoints and parameters
-  - [ ] 4.8 Create comprehensive API tests in `tests/test_resampling_routes.py`
+- [x] 4.0 Build API Endpoints for Resampled Data Access
+  - [x] 4.1 Add new route `GET /api/resample/<symbol>/<exchange>/<from_interval>/<to_interval>` in `app/routes/api.py`
+  - [x] 4.2 Create `POST /api/charts/resample` endpoint for bulk resampling requests
+  - [x] 4.3 Integrate resampling capability into existing `/api/charts/data` endpoint
+  - [x] 4.4 Add resampling support to data export functionality in existing export routes
+  - [x] 4.5 Implement API rate limiting for resampling operations to prevent abuse
+  - [x] 4.6 Add request validation and error handling for API endpoints
+  - [x] 4.7 Update API documentation to include resampling endpoints and parameters
+  - [x] 4.8 Create comprehensive API tests in `tests/test_resampling_routes.py`
 
 - [ ] 5.0 Create User Interface and Settings for Resampling Features
   - [ ] 5.1 Create `app/static/js/resampling.js` for frontend resampling state management

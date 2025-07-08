@@ -2,9 +2,10 @@
 Historify - Stock Historical Data Management App
 Settings Routes Blueprint
 """
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, current_app
 from app.models.settings import AppSettings
 from app.models import db
+from app.utils.cache_manager import cache
 import logging
 
 settings_bp = Blueprint('settings', __name__)
@@ -268,6 +269,20 @@ def optimize_database():
             'success': False,
             'message': f'Database optimization failed: {str(e)}'
         })
+
+@settings_bp.route('/api/settings/cache-info', methods=['GET'])
+def get_cache_info():
+    """Get cache statistics"""
+    try:
+        stats = {
+            'cache_type': current_app.config.get('CACHE_TYPE'),
+            'item_count': len(cache.cache._cache),
+            'threshold': current_app.config.get('CACHE_THRESHOLD')
+        }
+        return jsonify(stats)
+    except Exception as e:
+        current_app.logger.error(f"Error getting cache info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/api/settings/reset', methods=['POST'])
 def reset_settings():

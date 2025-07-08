@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timedelta, time as dt_time
 from flask import current_app, has_app_context
 from app.utils.rate_limiter import broker_rate_limiter, batch_process
+from app.utils.cache_manager import cache
 
 # Log Python path for debugging
 logging.info(f"Python path: {sys.path}")
@@ -55,6 +56,11 @@ def fetch_historical_data(symbol, start_date, end_date, interval='1d', exchange=
     Raises:
         ValueError: If API is not available or returns an error
     """
+    # Invalidate cache if fetching 1-minute data
+    if interval == '1m':
+        logging.info(f"Fetching 1-minute data for {symbol}. Invalidating cache.")
+        cache.clear()
+
     # Get API settings from database instead of environment
     from app.models.settings import AppSettings
     api_key = AppSettings.get_value('openalgo_api_key')

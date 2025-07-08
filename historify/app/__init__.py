@@ -26,7 +26,14 @@ def create_app(config_class=None):
     
     # Initialize extensions
     from app.models import db
+    from app.utils.cache_manager import cache
     db.init_app(app)
+    
+    # Configure and initialize caching
+    app.config['CACHE_TYPE'] = 'SimpleCache'  # In-memory cache
+    app.config['CACHE_DEFAULT_TIMEOUT'] = 300 # Default timeout 5 minutes
+    app.config['CACHE_THRESHOLD'] = 500       # Max number of items
+    cache.init_app(app)
     
     # Register blueprints
     from app.routes.main import main_bp

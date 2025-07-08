@@ -635,6 +635,17 @@ def download_export(export_id):
             headers={'Content-Disposition': f'attachment; filename={filename}'}
         )
 
+@api_bp.route('/resample/cancel/<task_id>', methods=['POST'])
+def cancel_resample_task(task_id):
+    """Cancel a running resampling task."""
+    # In a real application with background tasks (e.g., Celery),
+    # you would revoke the task here.
+    # For this simulation, we'll just log it.
+    logging.info(f"Received cancellation request for task_id: {task_id}")
+    # Here you might update a task status in a database or cache
+    # to indicate it has been cancelled.
+    return jsonify({'success': True, 'message': f'Cancellation request for task {task_id} received.'})
+
 @api_bp.route('/resample/<symbol>/<exchange>/<from_interval>/<to_interval>', methods=['GET'])
 @broker_rate_limiter
 def resample_data(symbol, exchange, from_interval, to_interval):

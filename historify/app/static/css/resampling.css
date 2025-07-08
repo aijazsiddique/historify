@@ -1,0 +1,28 @@
+/* Styles for the resampling overlay */
+#resampling-overlay {
+    display: flex; /* Use flexbox for centering */
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(31, 41, 55, 0.8); /* Semi-transparent dark background */
+    z-index: 100;
+    color: white;
+    text-align: center;
+    flex-direction: column;
+    backdrop-filter: blur(4px);
+    border-radius: 0.5rem; /* Match card rounding */
+}
+
+#resampling-overlay.hidden {
+    display: none;
+}
+
+#resampling-overlay .progress {
+    width: 80%;
+    max-width: 400px;
+    margin-top: 1rem;
+}

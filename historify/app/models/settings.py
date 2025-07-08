@@ -114,6 +114,10 @@ class AppSettings(db.Model):
             ('auto_refresh', 'true', 'boolean', 'Enable auto-refresh for real-time quotes'),
             ('show_tooltips', 'true', 'boolean', 'Show tooltips throughout the application'),
             ('chart_height', '400', 'integer', 'Default chart height in pixels'),
+            ('resampling_enabled', 'true', 'boolean', 'Enable automatic data resampling'),
+            ('resampling_cache_intraday', '15', 'integer', 'Cache timeout for intraday resampled data (minutes)'),
+            ('resampling_cache_daily', '60', 'integer', 'Cache timeout for daily resampled data (minutes)'),
+            ('indicator_calc_preference', 'resampled', 'string', 'Preference for calculating technical indicators (resampled or original)'),
         ]
         
         for key, value, data_type, description in defaults:

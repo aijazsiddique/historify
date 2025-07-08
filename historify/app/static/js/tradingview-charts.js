@@ -238,132 +238,119 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fetch chart data from the server
     async function fetchChartData() {
+        if (ResamplingManager.isResampling) {
+            showToast('info', 'A resampling operation is already in progress.');
+            return;
+        }
+
         try {
-            // Show loading state
             showLoading(true);
-            
-            // Save current visible range before updating data
-            let savedVisibleRange = null;
-            if (mainChart && mainChart.timeScale()) {
-                savedVisibleRange = mainChart.timeScale().getVisibleRange();
-            }
-            
-            // Use the interval value directly - no mapping needed
-            // The database stores intervals as they are (D, W, 1m, 5m, etc.)
+            let savedVisibleRange = mainChart ? mainChart.timeScale().getVisibleRange() : null;
             let apiInterval = timeframeSelector.value;
-            console.log('Selected timeframe:', apiInterval);
             
-            // Fetch data from API
-            const response = await fetch(`/charts/api/chart-data/${encodeURIComponent(symbolSelector.value)}/${encodeURIComponent(exchangeSelector.value)}/${apiInterval}/${emaPeriodInput.value}/${rsiPeriodInput.value}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            const url = `/charts/api/chart-data/${encodeURIComponent(symbolSelector.value)}/${encodeURIComponent(exchangeSelector.value)}/${apiInterval}/${emaPeriodInput.value}/${rsiPeriodInput.value}`;
+            const response = await fetch(url);
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
-            
-            // Process and display data
-            if (data.candlestick && data.candlestick.length > 0) {
-                // Log first few entries for debugging
-                console.log('First few raw timestamps:');
-                for (let i = 0; i < Math.min(3, data.candlestick.length); i++) {
-                    console.log(`Candle ${i}: ${data.candlestick[i].time} => ${new Date(data.candlestick[i].time * 1000).toISOString()}`);
-                }
-                
-                // Fix for IST display issue - adjust timestamps for intraday data
-                if (['1m', '5m', '15m', '30m', '1h'].includes(apiInterval)) {
-                    console.log('Applying IST adjustment to intraday data');
-                    // Convert timestamps for correct IST display (add 5.5 hours)
-                    data.candlestick = data.candlestick.map(item => ({
-                        ...item,
-                        time: item.time + (5.5 * 60 * 60)  // Add 5.5 hours in seconds
-                    }));
-                    
-                    // Do the same for indicators if present
-                    if (data.ema && data.ema.length > 0) {
-                        data.ema = data.ema.map(item => ({
-                            ...item,
-                            time: item.time + (5.5 * 60 * 60)
-                        }));
-                    }
-                    
-                    if (data.rsi && data.rsi.length > 0) {
-                        data.rsi = data.rsi.map(item => ({
-                            ...item,
-                            time: item.time + (5.5 * 60 * 60)
-                        }));
-                    }
-                    
-                    // Log the first few adjusted timestamps
-                    console.log('First few adjusted timestamps:');
-                    for (let i = 0; i < Math.min(3, data.candlestick.length); i++) {
-                        console.log(`Adjusted candle ${i}: ${data.candlestick[i].time} => ${new Date(data.candlestick[i].time * 1000).toISOString()}`);
-                    }
-                }
-                
-                // Store chart data
-                chartData = data.candlestick;
-                
-                // Update candlestick series
-                if (candleSeries) {
-                    candleSeries.setData(data.candlestick);
-                } else {
-                    console.error('Candlestick series not initialized');
-                    showToast('error', 'Chart not properly initialized. Please refresh the page.');
-                    return;
-                }
-                
-                // Update EMA series
-                if (data.ema && data.ema.length > 0 && emaSeries) {
-                    emaSeries.setData(data.ema);
-                    document.getElementById('ema-indicator').style.display = 'inline-flex';
-                } else if (emaSeries) {
-                    emaSeries.setData([]);
-                    document.getElementById('ema-indicator').style.display = 'none';
-                }
-                
-                // Update RSI series
-                if (data.rsi && data.rsi.length > 0 && rsiSeries) {
-                    rsiSeries.setData(data.rsi);
-                    document.getElementById('rsi-container').style.display = 'block';
-                    document.getElementById('rsi-indicator').style.display = 'inline-flex';
-                } else if (rsiSeries) {
-                    rsiSeries.setData([]);
-                    document.getElementById('rsi-container').style.display = 'none';
-                    document.getElementById('rsi-indicator').style.display = 'none';
-                }
-                
-                // Restore zoom level or fit content if this is the first load
-                if (savedVisibleRange && mainChart) {
-                    // Restore the saved visible range
-                    mainChart.timeScale().setVisibleRange(savedVisibleRange);
-                    if (rsiChart) {
-                        rsiChart.timeScale().setVisibleRange(savedVisibleRange);
-                    }
-                } else {
-                    // First load - fit content
-                    if (mainChart) {
-                        mainChart.timeScale().fitContent();
-                    }
-                    
-                    if (rsiChart) {
-                        rsiChart.timeScale().fitContent();
-                    }
-                }
-                
-                // Update data summary
-                updateDataSummary(symbolSelector.value, exchangeSelector.value, timeframeSelector.value, data.candlestick);
-                
-                // Show success message
-                showToast('success', `Loaded ${data.candlestick.length} data points for ${symbolSelector.value}`);
+
+            if (data.resampling_started) {
+                const taskId = data.task_id;
+                const pollIntervalId = pollForResamplingResult(taskId);
+                ResamplingManager.startResampling({ symbol: symbolSelector.value, interval: apiInterval }, taskId, pollIntervalId);
+                showToast('info', `Resampling data for ${symbolSelector.value} to ${apiInterval}. This may take a moment.`);
             } else {
-                showToast('error', `No data available for ${symbolSelector.value} (${exchangeSelector.value}) with ${timeframeSelector.value} interval`);
+                processChartData(data, savedVisibleRange);
             }
+
         } catch (error) {
             console.error('Error fetching chart data:', error);
             showToast('error', error.message || 'Failed to fetch chart data');
+            ResamplingManager.handleError(error);
         } finally {
             showLoading(false);
+        }
+    }
+
+    function pollForResamplingResult(taskId) {
+        const intervalId = setInterval(async () => {
+            // If resampling was cancelled, stop polling
+            if (!ResamplingManager.isResampling) {
+                clearInterval(intervalId);
+                return;
+            }
+            try {
+                const response = await fetch(`/api/resample/status/${taskId}`);
+                const result = await response.json();
+
+                if (result.state === 'SUCCESS') {
+                    clearInterval(intervalId);
+                    ResamplingManager.finishResampling(result.data);
+                    showToast('success', 'Resampling complete. Loading chart data.');
+                    processChartData(result.data, null);
+                } else if (result.state === 'PENDING' || result.state === 'PROGRESS') {
+                    const progress = result.info.progress || 0;
+                    ResamplingManager.updateProgress(progress);
+                } else if (result.state === 'FAILURE') {
+                    clearInterval(intervalId);
+                    const errorMessage = result.status || 'Unknown error during resampling.';
+                    ResamplingManager.handleError(new Error(errorMessage));
+                    showToast('error', `Resampling failed: ${errorMessage}`);
+                }
+            } catch (error) {
+                clearInterval(intervalId);
+                const errorMessage = error.message || 'Failed to get resampling status.';
+                ResamplingManager.handleError(new Error(errorMessage));
+                showToast('error', errorMessage);
+            }
+        }, 2000); // Poll every 2 seconds
+        return intervalId;
+    }
+
+    function processChartData(data, savedVisibleRange) {
+        if (data.candlestick && data.candlestick.length > 0) {
+            let apiInterval = timeframeSelector.value;
+            if (['1m', '5m', '15m', '30m', '1h'].includes(apiInterval)) {
+                const adjustTime = (item) => ({ ...item, time: item.time + (5.5 * 60 * 60) });
+                data.candlestick = data.candlestick.map(adjustTime);
+                if (data.ema) data.ema = data.ema.map(adjustTime);
+                if (data.rsi) data.rsi = data.rsi.map(adjustTime);
+            }
+
+            chartData = data.candlestick;
+            candleSeries?.setData(data.candlestick);
+            
+            if (data.ema && emaSeries) {
+                emaSeries.setData(data.ema);
+                document.getElementById('ema-indicator').style.display = 'inline-flex';
+            } else if (emaSeries) {
+                emaSeries.setData([]);
+                document.getElementById('ema-indicator').style.display = 'none';
+            }
+
+            if (data.rsi && rsiSeries) {
+                rsiSeries.setData(data.rsi);
+                document.getElementById('rsi-container').style.display = 'block';
+                document.getElementById('rsi-indicator').style.display = 'inline-flex';
+            } else if (rsiSeries) {
+                rsiSeries.setData([]);
+                document.getElementById('rsi-container').style.display = 'none';
+                document.getElementById('rsi-indicator').style.display = 'none';
+            }
+
+            if (savedVisibleRange && mainChart) {
+                mainChart.timeScale().setVisibleRange(savedVisibleRange);
+                if (rsiChart) rsiChart.timeScale().setVisibleRange(savedVisibleRange);
+            } else {
+                mainChart?.timeScale().fitContent();
+                rsiChart?.timeScale().fitContent();
+            }
+
+            updateDataSummary(data.candlestick);
+            showToast('success', `Loaded ${data.candlestick.length} data points for ${symbolSelector.value}`);
+        } else {
+            showToast('error', `No data available for ${symbolSelector.value} (${exchangeSelector.value}) with ${timeframeSelector.value} interval`);
         }
     }
     
@@ -651,6 +638,46 @@ document.addEventListener('DOMContentLoaded', () => {
     
     autoUpdateToggle.addEventListener('change', () => {
         setupAutoUpdate();
+    });
+
+    // Resampling UI Elements
+    const resamplingOverlay = document.getElementById('resampling-overlay');
+    const resamplingProgress = document.getElementById('resampling-progress');
+    const resamplingMessage = document.getElementById('resampling-message');
+    const cancelResamplingBtn = document.getElementById('cancel-resampling-btn');
+
+    // Resampling event listeners
+    document.addEventListener('resampling:start', (e) => {
+        resamplingMessage.textContent = `Resampling ${e.detail.symbol} to ${e.detail.interval}...`;
+        resamplingProgress.value = 0;
+        resamplingOverlay.classList.remove('hidden');
+        showLoading(true);
+    });
+
+    document.addEventListener('resampling:progress', (e) => {
+        resamplingProgress.value = e.detail.progress;
+    });
+
+    document.addEventListener('resampling:finish', (e) => {
+        resamplingOverlay.classList.add('hidden');
+        showLoading(false);
+        showToast('success', 'Resampling finished. Displaying data.');
+    });
+
+    document.addEventListener('resampling:error', (e) => {
+        resamplingOverlay.classList.add('hidden');
+        showLoading(false);
+        showToast('error', `Resampling failed: ${e.detail.message}`);
+    });
+
+    document.addEventListener('resampling:cancel', () => {
+        resamplingOverlay.classList.add('hidden');
+        showLoading(false);
+        showToast('warning', 'Resampling was cancelled.');
+    });
+
+    cancelResamplingBtn.addEventListener('click', () => {
+        ResamplingManager.cancelResampling();
     });
     
     // Listen for theme changes

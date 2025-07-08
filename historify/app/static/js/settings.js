@@ -34,6 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (displayForm) {
         displayForm.addEventListener('submit', saveDisplaySettings);
     }
+
+    const resamplingForm = document.getElementById('resampling-settings-form');
+    if (resamplingForm) {
+        resamplingForm.addEventListener('submit', saveResamplingSettings);
+    }
     
     // Load initial settings
     loadSettings();
@@ -57,6 +62,12 @@ async function loadSettings() {
             document.getElementById('rate-limit').value = settings.rate_limit_delay || '100';
             document.getElementById('default-range').value = settings.default_date_range || '30';
             document.getElementById('chart-height').value = settings.chart_height || '400';
+
+            // Resampling settings
+            document.getElementById('resampling-enabled').checked = settings.resampling_enabled !== false;
+            document.getElementById('resampling-cache-intraday').value = settings.resampling_cache_intraday || '15';
+            document.getElementById('resampling-cache-daily').value = settings.resampling_cache_daily || '60';
+            document.getElementById('indicator-calc-preference').value = settings.indicator_calc_preference || 'resampled';
             
             // Update status indicators
             updateFieldStatus('api-url-status', settings.openalgo_api_host);
@@ -225,6 +236,35 @@ async function saveDisplaySettings(e) {
     } catch (error) {
         console.error('Error saving display settings:', error);
         showToast('Failed to save display settings', 'error');
+    }
+}
+
+async function saveResamplingSettings(e) {
+    e.preventDefault();
+
+    const settings = {
+        resampling_enabled: document.getElementById('resampling-enabled').checked,
+        resampling_cache_intraday: document.getElementById('resampling-cache-intraday').value,
+        resampling_cache_daily: document.getElementById('resampling-cache-daily').value,
+        indicator_calc_preference: document.getElementById('indicator-calc-preference').value
+    };
+
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+
+        if (response.ok) {
+            showToast('Resampling settings saved successfully', 'success');
+        } else {
+            const error = await response.json();
+            showToast(error.message || 'Failed to save resampling settings', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving resampling settings:', error);
+        showToast('Failed to save resampling settings', 'error');
     }
 }
 

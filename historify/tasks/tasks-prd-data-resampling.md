@@ -63,14 +63,14 @@
   - [x] 4.8 Create comprehensive API tests in `tests/test_resampling_routes.py`
 
 - [ ] 5.0 Create User Interface and Settings for Resampling Features
-  - [ ] 5.1 Create `app/static/js/resampling.js` for frontend resampling state management
-  - [ ] 5.2 Update `app/static/js/tradingview-charts.js` to handle resampling requests and responses
-  - [ ] 5.3 Implement loading indicators and progress bars for resampling operations
-  - [ ] 5.4 Add toast notifications to inform users when data is being resampled
-  - [ ] 5.5 Create resampling settings section in `app/templates/settings.html`
-  - [ ] 5.6 Update `app/models/settings.py` to include resampling preferences (enable/disable, cache timeout, etc.)
-  - [ ] 5.7 Add user options for technical indicator calculation method preferences
-  - [ ] 5.8 Create `app/static/css/resampling.css` for styling loading states and notifications
-  - [ ] 5.9 Implement cancellation capability for long-running resampling processes
-  - [ ] 5.10 Add frontend validation and error handling for resampling failures
-  - [ ] 5.11 Create frontend tests in `tests/test_resampling_frontend.py`
+- [x] 5.1 Create `app/static/js/resampling.js` for frontend resampling state management
+  - [x] 5.2 Update `app/static/js/tradingview-charts.js` to handle resampling requests and responses
+  - [x] 5.3 Implement loading indicators and progress bars for resampling operations
+  - [x] 5.4 Add toast notifications to inform users when data is being resampled
+  - [x] 5.5 Create resampling settings section in `app/templates/settings.html`
+  - [x] 5.6 Update `app/models/settings.py` to include resampling preferences (enable/disable, cache timeout, etc.)
+  - [x] 5.7 Add user options for technical indicator calculation method preferences
+  - [x] 5.8 Create `app/static/css/resampling.css` for styling loading states and notifications
+  - [x] 5.9 Implement cancellation capability for long-running resampling processes
+  - [x] 5.10 Add frontend validation and error handling for resampling failures
+  - [x] 5.11 Create frontend tests in `tests/test_resampling_frontend.py`

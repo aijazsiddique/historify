@@ -3,6 +3,7 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resampling.css') }}">
 <!-- TradingView Lightweight Charts CSS -->
 <style>
   .chart-container {
@@ -132,6 +133,18 @@
     <!-- Main Chart Container -->
     <div id="chart-container" class="chart-container">
       <div id="chart" class="tv-lightweight-charts" style="width: 100%; height: 100%;"></div>
+      <!-- Resampling Overlay -->
+      <div id="resampling-overlay" class="absolute inset-0 bg-base-100 bg-opacity-75 flex-col items-center justify-center z-10 hidden">
+        <div class="text-center">
+          <span class="loading loading-spinner loading-lg"></span>
+          <p class="mt-4 text-lg font-semibold">Resampling data...</p>
+          <p id="resampling-message" class="text-sm">Please wait, this may take a moment.</p>
+        </div>
+        <div class="w-1/2 mt-4">
+          <progress id="resampling-progress" class="progress progress-primary w-full" value="0" max="100"></progress>
+        </div>
+        <button id="cancel-resampling-btn" class="btn btn-sm btn-ghost mt-4">Cancel</button>
+      </div>
     </div>
     
     <!-- RSI Indicator Container -->

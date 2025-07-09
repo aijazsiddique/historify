@@ -1,0 +1,15 @@
+# Environments
+.env
+venv/
+instance/
+
+# Databases
+app.db
+
+# Python
+__pycache__/
+.pytest_cache/
+
+# Project specific
+dev/
+websocket.md

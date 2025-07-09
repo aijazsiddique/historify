@@ -142,6 +142,19 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
     try:
         indicator_source = request.args.get('indicator_source', 'resampled')
         is_resampled = False
+        
+        # Standardize the interval mapping
+        timeframe_map = {
+            'D': '1d',
+            'W': '1w',
+            'M': '1M'
+        }
+        
+        # Normalize interval if it's in the map
+        if interval in timeframe_map:
+            logging.info(f"Normalizing interval: '{interval}' -> '{timeframe_map[interval]}'")
+            interval = timeframe_map[interval]
+
         logging.info(f"Fetching chart data for {symbol} ({exchange}) with interval '{interval}', EMA period {ema_period}, RSI period {rsi_period}, indicator_source {indicator_source}")
         
         # Debug: Check available tables first
@@ -163,6 +176,14 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
             # Instead of hardcoded limits, get the earliest available data from the table
             from app.models.dynamic_tables import get_earliest_date
             earliest_date = get_earliest_date(symbol, exchange, interval)
+
+            if not earliest_date and interval in ['1d', 'D']:
+                alternative_interval = 'D' if interval == '1d' else '1d'
+                earliest_date = get_earliest_date(symbol, exchange, alternative_interval)
+
+            if not earliest_date and interval in ['1w', 'W']:
+                alternative_interval = 'W' if interval == '1w' else '1w'
+                earliest_date = get_earliest_date(symbol, exchange, alternative_interval)
             
             if earliest_date:
                 start_date = earliest_date
@@ -182,8 +203,20 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
         
         logging.info(f"Date range: {start_date} to {end_date}")
         
-        # Fetch data from dynamic table - try multiple interval formats
-        data = get_data_by_timeframe(symbol, exchange, interval, start_date, end_date)
+        # Determine the final interval to use for fetching data
+        final_interval = interval
+        if not get_data_by_timeframe(symbol, exchange, interval, start_date, end_date):
+            if interval in ['1d', 'D']:
+                alternative_interval = 'D' if interval == '1d' else '1d'
+                if get_data_by_timeframe(symbol, exchange, alternative_interval, start_date, end_date):
+                    final_interval = alternative_interval
+            elif interval in ['1w', 'W']:
+                alternative_interval = 'W' if interval == '1w' else '1w'
+                if get_data_by_timeframe(symbol, exchange, alternative_interval, start_date, end_date):
+                    final_interval = alternative_interval
+        
+        logging.info(f"Using final interval: {final_interval}")
+        data = get_data_by_timeframe(symbol, exchange, final_interval, start_date, end_date)
         
         # If no data found, check if we can resample from 1-minute data
         if not data and interval != '1m':
@@ -263,17 +296,6 @@ def get_chart_data(symbol, exchange, interval, ema_period=20, rsi_period=14):
                 else:
                     logging.info(f"No 1-minute data found for {symbol}. Cannot resample.")
 
-        # If no data found and interval is daily, try alternative formats
-        if not data and interval in ['1d', 'D']:
-            alternative_interval = 'D' if interval == '1d' else '1d'
-            logging.info(f"No data found with {interval}, trying {alternative_interval}")
-            data = get_data_by_timeframe(symbol, exchange, alternative_interval, start_date, end_date)
-            
-        # Same for weekly
-        if not data and interval in ['1w', 'W']:
-            alternative_interval = 'W' if interval == '1w' else '1w'
-            logging.info(f"No data found with {interval}, trying {alternative_interval}")
-            data = get_data_by_timeframe(symbol, exchange, alternative_interval, start_date, end_date)
         
         if not data:
             logging.warning(f"No data found for {symbol} ({exchange}) with {interval} interval")
